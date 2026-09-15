@@ -5,27 +5,31 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Adewah245/SoundPilot/backend/internal/dsp"
+	"github.com/Adewah245/SoundPilot/backend/internal/engineering"
+	"github.com/Adewah245/SoundPilot/backend/internal/measurement"
 	"github.com/Adewah245/SoundPilot/backend/internal/storage"
 )
 
 // Server contains the SoundPilot HTTP server configuration.
 type Server struct {
-	port      string
-	db        *storage.Database
-	dspEngine *dsp.Engine
+	port               string
+	db                 *storage.Database
+	measurementService *measurement.Service
+	engineeringService *engineering.Service
 }
 
 // NewServer creates a new SoundPilot HTTP server.
 func NewServer(
 	port string,
 	db *storage.Database,
-	dspEngine *dsp.Engine,
+	measurementService *measurement.Service,
+	engineeringService *engineering.Service,
 ) *Server {
 	return &Server{
-		port:      port,
-		db:        db,
-		dspEngine: dspEngine,
+		port:               port,
+		db:                 db,
+		measurementService: measurementService,
+		engineeringService: engineeringService,
 	}
 }
 
