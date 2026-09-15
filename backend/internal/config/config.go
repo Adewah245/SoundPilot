@@ -1,30 +1,53 @@
 package config
 
 import (
-	"errors"
+	"fmt"
 	"os"
+	"strconv"
 )
 
-// Config contains the application configuration.
+// Config contains the runtime configuration for SoundPilot.
 type Config struct {
-	Port        string
-	DatabaseURL string
+	Port          string
+	DatabaseURL   string
+	PythonPath    string
+	DSPRunnerPath string
 }
 
 // Load reads the SoundPilot configuration from environment variables.
-func Load() (Config, error) {
+func Load() (*Config, error) {
 	port := os.Getenv("PORT")
-	if port == "" {
-		return Config{}, errors.New("PORT is required")
-	}
-
 	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		return Config{}, errors.New("DATABASE_URL is required")
+
+	if port == "" {
+		return nil, fmt.Errorf("PORT is required")
 	}
 
-	return Config{
-		Port:        port,
-		DatabaseURL: databaseURL,
+	if databaseURL == "" {
+		return nil, fmt.Errorf("DATABASE_URL is required")
+	}
+
+	// Use the project virtual environment Python by default.
+	pythonPath := os.Getenv("PYTHON_PATH")
+	if pythonPath == "" {
+		pythonPath = ".venv/bin/python"
+	}
+
+	// Use the Python DSP runner by default.
+	dspRunnerPath := os.Getenv("DSP_RUNNER_PATH")
+	if dspRunnerPath == "" {
+		dspRunnerPath = "dsp/runner.py"
+	}
+
+	// Validate that PORT contains a valid number.
+	if _, err := strconv.Atoi(port); err != nil {
+		return nil, fmt.Errorf("PORT must be a valid number")
+	}
+
+	return &Config{
+		Port:          port,
+		DatabaseURL:   databaseURL,
+		PythonPath:    pythonPath,
+		DSPRunnerPath: dspRunnerPath,
 	}, nil
 }
