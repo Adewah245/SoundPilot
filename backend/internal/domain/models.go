@@ -10,6 +10,9 @@ type Venue struct {
 	WidthMeters     float64   `json:"width_meters,omitempty"`
 	LengthMeters    float64   `json:"length_meters,omitempty"`
 	HeightMeters    float64   `json:"height_meters,omitempty"`
+    DurationSeconds float64   `json:"duration_seconds"`
+    SampleRate      int       `json:"sample_rate"`
+    Channels        int       `json:"channels"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
@@ -20,6 +23,9 @@ type Zone struct {
 	VenueID   string    `json:"venue_id"`
 	Name      string    `json:"name"`
 	Type      string    `json:"type"`
+    DurationSeconds float64   `json:"duration_seconds"`
+    SampleRate      int       `json:"sample_rate"`
+    Channels        int       `json:"channels"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -32,6 +38,9 @@ type MeasurementPoint struct {
 	PositionX float64   `json:"position_x,omitempty"`
 	PositionY float64   `json:"position_y,omitempty"`
 	PositionZ float64   `json:"position_z,omitempty"`
+    DurationSeconds float64   `json:"duration_seconds"`
+    SampleRate      int       `json:"sample_rate"`
+    Channels        int       `json:"channels"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -45,6 +54,9 @@ type Equipment struct {
 	Model       string    `json:"model,omitempty"`
 	Location    string    `json:"location,omitempty"`
 	Description string    `json:"description,omitempty"`
+    DurationSeconds float64   `json:"duration_seconds"`
+    SampleRate      int       `json:"sample_rate"`
+    Channels        int       `json:"channels"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -62,6 +74,9 @@ type Baseline struct {
 	VenueID     string    `json:"venue_id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description,omitempty"`
+    DurationSeconds float64   `json:"duration_seconds"`
+    SampleRate      int       `json:"sample_rate"`
+    Channels        int       `json:"channels"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -84,6 +99,9 @@ type Measurement struct {
 	ClippingDetected   bool      `json:"clipping_detected"`
 	FeedbackDetected   bool      `json:"feedback_detected"`
 
+    DurationSeconds float64   `json:"duration_seconds"`
+    SampleRate      int       `json:"sample_rate"`
+    Channels        int       `json:"channels"`
 	CreatedAt          time.Time `json:"created_at"`
 }
 
@@ -112,6 +130,9 @@ type Verification struct {
 	Score              float64   `json:"score,omitempty"`
 	Summary            string    `json:"summary,omitempty"`
 
+    DurationSeconds float64   `json:"duration_seconds"`
+    SampleRate      int       `json:"sample_rate"`
+    Channels        int       `json:"channels"`
 	CreatedAt          time.Time `json:"created_at"`
 }
 
@@ -121,6 +142,9 @@ type EngineeringProfile struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description,omitempty"`
 	Version     string    `json:"version"`
+    DurationSeconds float64   `json:"duration_seconds"`
+    SampleRate      int       `json:"sample_rate"`
+    Channels        int       `json:"channels"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -146,6 +170,9 @@ type Alert struct {
 	Title       string    `json:"title"`
 	Message     string    `json:"message"`
 	Acknowledged bool     `json:"acknowledged"`
+    DurationSeconds float64   `json:"duration_seconds"`
+    SampleRate      int       `json:"sample_rate"`
+    Channels        int       `json:"channels"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
