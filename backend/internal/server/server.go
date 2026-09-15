@@ -5,8 +5,10 @@ import (
 	"log"
 	"net/http"
 
+	engineeringapi "github.com/Adewah245/SoundPilot/backend/internal/api/engineering"
+	measurementapi "github.com/Adewah245/SoundPilot/backend/internal/api/measurement"
 	"github.com/Adewah245/SoundPilot/backend/internal/engineering"
-	"github.com/Adewah245/SoundPilot/backend/internal/measurement"
+	measurementservice "github.com/Adewah245/SoundPilot/backend/internal/measurement"
 	"github.com/Adewah245/SoundPilot/backend/internal/storage"
 )
 
@@ -14,7 +16,7 @@ import (
 type Server struct {
 	port               string
 	db                 *storage.Database
-	measurementService *measurement.Service
+	measurementService *measurementservice.Service
 	engineeringService *engineering.Service
 }
 
@@ -22,7 +24,7 @@ type Server struct {
 func NewServer(
 	port string,
 	db *storage.Database,
-	measurementService *measurement.Service,
+	measurementService *measurementservice.Service,
 	engineeringService *engineering.Service,
 ) *Server {
 	return &Server{
@@ -36,6 +38,28 @@ func NewServer(
 // Start starts the SoundPilot HTTP server.
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
+
+	// Create the measurement API handler.
+	measurementHandler := measurementapi.NewHandler(
+		s.measurementService,
+	)
+
+	// Register the measurement endpoint.
+	mux.HandleFunc(
+		"/measurements",
+		measurementHandler.MeasureHandler,
+	)
+
+	// Create the engineering API handler.
+	engineeringHandler := engineeringapi.NewHandler(
+		s.engineeringService,
+	)
+
+	// Register the engineering evaluation endpoint.
+	mux.HandleFunc(
+		"/engineering/evaluate",
+		engineeringHandler.EvaluateHandler,
+	)
 
 	// Health endpoint confirms that the Go application is running.
 	mux.HandleFunc("/health", s.healthHandler)
