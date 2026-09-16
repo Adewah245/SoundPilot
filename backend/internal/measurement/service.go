@@ -57,6 +57,14 @@ func (s *Service) Measure(
 		return domain.Measurement{}, fmt.Errorf("measure audio: %w", err)
 	}
 
+	// Validate the response before converting or storing it.
+	if err := ValidateResponse(request, response); err != nil {
+		return domain.Measurement{}, fmt.Errorf(
+			"validate DSP response: %w",
+			err,
+		)
+	}
+
 	// Convert DSP frequency measurements into domain measurements.
 	frequencyData := make(
 		[]domain.FrequencyMeasurement,
