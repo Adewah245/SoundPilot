@@ -4,11 +4,17 @@ import json
 import sys
 from datetime import datetime, timezone
 
+import numpy as np
+
 from dsp.capture.audio_capture import record_audio
 from dsp.detection.clipping import detect_clipping
 from dsp.detection.feedback import detect_feedback
 from dsp.features.audio_features import extract_features
 from dsp.measurements.distortion import calculate_distortion
+
+
+# Current version of the Go <-> Python measurement contract.
+CONTRACT_VERSION = "1.0"
 
 
 # Read one request from Go and return one measurement response.
@@ -44,7 +50,9 @@ def main() -> None:
     frequency_data = [
         {
             "frequency_hz": float(frequency),
-            "level_db": float(20 * __import__("numpy").log10(max(magnitude, 1e-12))),
+            "level_db": float(
+                20 * np.log10(max(magnitude, 1e-12))
+            ),
         }
         for frequency, magnitude in zip(
             features["frequencies"],
@@ -53,12 +61,12 @@ def main() -> None:
     ]
 
     response = {
-        "contract_version": request.get("contract_version", ""),
+        "contract_version": CONTRACT_VERSION,
         "session_id": request.get("session_id", ""),
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "rms_decibels": features["dbfs"],
         "peak_decibels": float(
-            20 * __import__("numpy").log10(max(features["peak"], 1e-12))
+            20 * np.log10(max(features["peak"], 1e-12))
         ),
         "frequency_data": frequency_data,
         "noise_level": features["noise_level"],
