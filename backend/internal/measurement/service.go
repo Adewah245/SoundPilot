@@ -35,7 +35,10 @@ func (s *Service) Measure(
 ) (domain.Measurement, error) {
 	// Validate the measurement request before DSP processing.
 	if err := ValidateRequest(request); err != nil {
-		return domain.Measurement{}, fmt.Errorf("validate measurement request: %w", err)
+		return domain.Measurement{}, fmt.Errorf(
+			"validate measurement request: %w",
+			err,
+		)
 	}
 
 	if s.dspEngine == nil {
@@ -43,7 +46,9 @@ func (s *Service) Measure(
 	}
 
 	if s.repository == nil {
-		return domain.Measurement{}, fmt.Errorf("measurement repository is not configured")
+		return domain.Measurement{}, fmt.Errorf(
+			"measurement repository is not configured",
+		)
 	}
 
 	// Send the measurement request to the Python DSP engine.
@@ -71,7 +76,7 @@ func (s *Service) Measure(
 
 	// Convert the DSP response into the SoundPilot domain model.
 	measurement := domain.Measurement{
-		ID:                 request.SessionID,
+		ID:                 domain.NewID(),
 		SessionID:          request.SessionID,
 		VenueID:            request.VenueID,
 		ZoneID:             request.ZoneID,
@@ -96,7 +101,10 @@ func (s *Service) Measure(
 
 	// Store the completed measurement in PostgreSQL.
 	if err := s.repository.SaveMeasurement(ctx, measurement); err != nil {
-		return domain.Measurement{}, fmt.Errorf("save measurement: %w", err)
+		return domain.Measurement{}, fmt.Errorf(
+			"save measurement: %w",
+			err,
+		)
 	}
 
 	return measurement, nil
