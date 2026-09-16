@@ -102,6 +102,19 @@ func (r *MeasurementRepository) SaveMeasurement(
 		return fmt.Errorf("commit measurement transaction: %w", err)
 	}
 
+	var count int
+
+	err = r.db.Pool.QueryRow(
+		ctx,
+		"SELECT COUNT(*) FROM measurements",
+	).Scan(&count)
+
+	if err != nil {
+		return fmt.Errorf("check measurement count: %w", err)
+	}
+
+	fmt.Println("MEASUREMENTS IN DB:", count)
+
 	return nil
 }
 

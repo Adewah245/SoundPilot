@@ -33,6 +33,17 @@ func main() {
 	}
 	defer db.Close()
 
+	var dbName string
+	err = db.Pool.QueryRow(
+		context.Background(),
+		"SELECT current_database()",
+	).Scan(&dbName)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("CONNECTED DATABASE:", dbName)
 	// Create the Python DSP engine.
 	dspEngine := dsp.NewEngine(
 		cfg.PythonPath,
