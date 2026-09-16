@@ -80,6 +80,12 @@ type Baseline struct {
 	CreatedAt       time.Time `json:"created_at"`
 }
 
+// FrequencyMeasurement represents one measured frequency and its level.
+type FrequencyMeasurement struct {
+        FrequencyHz float64 `json:"frequency_hz"`
+        LevelDB     float64 `json:"level_db"`
+}
+
 // Measurement represents a measurement produced by the DSP engine.
 type Measurement struct {
 	ID                 string `json:"id"`
@@ -91,7 +97,7 @@ type Measurement struct {
 
 	RMSDecibels   float64   `json:"rms_decibels"`
 	PeakDecibels  float64   `json:"peak_decibels"`
-	FrequencyData []float64 `json:"frequency_data,omitempty"`
+	FrequencyData []FrequencyMeasurement `json:"frequency_data,omitempty"`
 
 	NoiseLevel      float64 `json:"noise_level,omitempty"`
 	DistortionLevel float64 `json:"distortion_level,omitempty"`

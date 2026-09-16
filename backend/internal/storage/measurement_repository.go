@@ -80,6 +80,24 @@ func (r *MeasurementRepository) SaveMeasurement(
 		return fmt.Errorf("save measurement: %w", err)
 	}
 
+	for _, frequency := range measurement.FrequencyData {
+		_, err = tx.Exec(
+			ctx,
+			`INSERT INTO measurement_frequencies (
+				measurement_id,
+				frequency_hz,
+				level_db
+			)
+			VALUES ($1, $2, $3)`,
+			measurement.ID,
+			frequency.FrequencyHz,
+			frequency.LevelDB,
+		)
+		if err != nil {
+			return fmt.Errorf("save measurement frequency: %w", err)
+		}
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit measurement transaction: %w", err)
 	}

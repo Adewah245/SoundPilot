@@ -33,6 +33,11 @@ func (s *Service) Measure(
 	ctx context.Context,
 	request contract.MeasurementRequest,
 ) (domain.Measurement, error) {
+	// Validate the measurement request before DSP processing.
+	if err := ValidateRequest(request); err != nil {
+		return domain.Measurement{}, fmt.Errorf("validate measurement request: %w", err)
+	}
+
 	if s.dspEngine == nil {
 		return domain.Measurement{}, fmt.Errorf("DSP engine is not configured")
 	}
@@ -47,6 +52,23 @@ func (s *Service) Measure(
 		return domain.Measurement{}, fmt.Errorf("measure audio: %w", err)
 	}
 
+	// Convert DSP frequency measurements into domain measurements.
+	frequencyData := make(
+		[]domain.FrequencyMeasurement,
+		0,
+		len(response.FrequencyData),
+	)
+
+	for _, frequency := range response.FrequencyData {
+		frequencyData = append(
+			frequencyData,
+			domain.FrequencyMeasurement{
+				FrequencyHz: frequency.FrequencyHz,
+				LevelDB:     frequency.LevelDB,
+			},
+		)
+	}
+
 	// Convert the DSP response into the SoundPilot domain model.
 	measurement := domain.Measurement{
 		ID:                 request.SessionID,
@@ -57,6 +79,7 @@ func (s *Service) Measure(
 		Source:             request.AudioSource,
 		RMSDecibels:        response.RMSDecibels,
 		PeakDecibels:       response.PeakDecibels,
+		FrequencyData:      frequencyData,
 		NoiseLevel:         response.NoiseLevel,
 		DistortionLevel:    response.DistortionLevel,
 		ClippingDetected:   response.ClippingDetected,
