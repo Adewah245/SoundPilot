@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
 	"os/exec"
 
 	"github.com/Adewah245/SoundPilot/backend/internal/dsp/contract"
@@ -42,17 +44,33 @@ func (e *Engine) Measure(
 		e.ScriptPath,
 	)
 
+	// Provide Python access to the SoundPilot DSP package and PortAudio library.
+	cmd.Env = append(
+		os.Environ(),
+		"PYTHONPATH=.",
+		"LD_LIBRARY_PATH=.local/usr/lib/x86_64-linux-gnu",
+	)
 	cmd.Stdin = bytes.NewReader(input)
+
+	// Show Python errors in the terminal for debugging.
+	cmd.Stderr = os.Stderr
+
 	// Capture the Python response.
-	output, err := cmd.Output()
-	if err != nil {
+	var output bytes.Buffer
+
+	cmd.Stdout = &output
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
 		return contract.MeasurementResponse{}, fmt.Errorf("run DSP engine: %w", err)
 	}
 
+	responseBytes := output.Bytes()
+	log.Printf("DSP RAW START: %.200s", responseBytes)
 	// Convert the Python JSON response back into the Go contract.
 	var response contract.MeasurementResponse
 
-	if err := json.Unmarshal(output, &response); err != nil {
+	if err := json.Unmarshal(responseBytes, &response); err != nil {
 		return contract.MeasurementResponse{}, fmt.Errorf("decode DSP response: %w", err)
 	}
 
