@@ -2,10 +2,11 @@ package measurement
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
-	"github.com/Adewah245/SoundPilot/backend/internal/dsp/contract"
 	measurementservice "github.com/Adewah245/SoundPilot/backend/internal/measurement"
+	"github.com/Adewah245/SoundPilot/backend/internal/dsp/contract"
 )
 
 // Handler handles SoundPilot measurement API requests.
@@ -47,6 +48,19 @@ func (h *Handler) MeasureHandler(
 
 	result, err := h.service.Measure(r.Context(), request)
 	if err != nil {
+		// Validation errors are client errors, not server errors.
+		var validationErr *measurementservice.ValidationError
+
+		if errors.As(err, &validationErr) {
+			http.Error(
+				w,
+				err.Error(),
+				http.StatusBadRequest,
+			)
+			return
+		}
+
+		// Unexpected measurement errors are server errors.
 		http.Error(
 			w,
 			err.Error(),
