@@ -4,10 +4,10 @@ import "time"
 
 // MeasurementRequest is sent from Go to the Python DSP engine.
 type MeasurementRequest struct {
-	ContractVersion string `json:"contract_version"`
-	SessionID       string `json:"session_id"`
-	VenueID         string `json:"venue_id"`
-	ZoneID          string `json:"zone_id"`
+	ContractVersion    string `json:"contract_version"`
+	SessionID          string `json:"session_id"`
+	VenueID            string `json:"venue_id"`
+	ZoneID             string `json:"zone_id"`
 	MeasurementPointID string `json:"measurement_point_id"`
 
 	// AudioSource identifies where the audio comes from.
