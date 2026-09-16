@@ -10,10 +10,16 @@ import (
 	"github.com/Adewah245/SoundPilot/backend/internal/measurement"
 	"github.com/Adewah245/SoundPilot/backend/internal/server"
 	"github.com/Adewah245/SoundPilot/backend/internal/storage"
+	"github.com/Adewah245/SoundPilot/backend/internal/verification"
+	"github.com/joho/godotenv"
 )
 
 // Start the SoundPilot application.
 func main() {
+	// Load environment variables from .env file.
+	if err := godotenv.Load(); err != nil {
+		log.Printf("warning: .env file not loaded: %v", err)
+	}
 	// Load application configuration.
 	cfg, err := config.Load()
 	if err != nil {
@@ -44,14 +50,26 @@ func main() {
 
 	// Create the engineering engine and service.
 	engineeringEngine := engineering.NewEngine()
-	engineeringService := engineering.NewService(engineeringEngine)
+	engineeringRepository := storage.NewEngineeringRepository(db)
+	engineeringService := engineering.NewService(
+		engineeringEngine,
+		engineeringRepository,
+	)
+
+	// Create the verification repository and service.
+	verificationRepository := storage.NewVerificationRepository(db)
+	verificationService := verification.NewService()
 
 	// Create the HTTP server.
 	appServer := server.NewServer(
 		cfg.Port,
 		db,
 		measurementService,
+		measurementRepository,
 		engineeringService,
+		engineeringRepository,
+		verificationService,
+		verificationRepository,
 	)
 
 	// Start the SoundPilot server.

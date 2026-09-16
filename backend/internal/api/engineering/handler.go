@@ -3,20 +3,27 @@ package engineering
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/Adewah245/SoundPilot/backend/internal/dsp/contract"
 	engineeringservice "github.com/Adewah245/SoundPilot/backend/internal/engineering"
+	"github.com/Adewah245/SoundPilot/backend/internal/storage"
 )
 
 // Handler handles SoundPilot engineering API requests.
 type Handler struct {
-	service *engineeringservice.Service
+	service    *engineeringservice.Service
+	repository *storage.EngineeringRepository
 }
 
 // NewHandler creates a new engineering API handler.
-func NewHandler(service *engineeringservice.Service) *Handler {
+func NewHandler(
+	service *engineeringservice.Service,
+	repository *storage.EngineeringRepository,
+) *Handler {
 	return &Handler{
-		service: service,
+		service:    service,
+		repository: repository,
 	}
 }
 
@@ -45,7 +52,68 @@ func (h *Handler) EvaluateHandler(
 		return
 	}
 
-	result, err := h.service.Evaluate(request)
+	result, err := h.service.Evaluate(r.Context(), request)
+	if err != nil {
+		http.Error(
+			w,
+			err.Error(),
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := json.NewEncoder(w).Encode(result); err != nil {
+		http.Error(
+			w,
+			"failed to encode response",
+			http.StatusInternalServerError,
+		)
+	}
+}
+
+// GetResultHandler retrieves one stored engineering result.
+func (h *Handler) GetResultHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	if r.Method != http.MethodGet {
+		http.Error(
+			w,
+			"method not allowed",
+			http.StatusMethodNotAllowed,
+		)
+		return
+	}
+
+	resultID := strings.TrimPrefix(
+		r.URL.Path,
+		"/engineering/results/",
+	)
+
+	if resultID == "" {
+		http.Error(
+			w,
+			"engineering result ID is required",
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	if h.repository == nil {
+		http.Error(
+			w,
+			"engineering repository is not configured",
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	result, err := h.repository.GetEngineeringResult(
+		r.Context(),
+		resultID,
+	)
 	if err != nil {
 		http.Error(
 			w,

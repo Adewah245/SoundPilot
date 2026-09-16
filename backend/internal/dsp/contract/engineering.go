@@ -26,6 +26,8 @@ type EngineeringEvaluationResponse struct {
 
 	MeasurementID string `json:"measurement_id"`
 
+	EngineeringProfileID string `json:"engineering_profile_id"`
+
 	// Overall evaluation status.
 	Status string `json:"status"`
 

@@ -18,6 +18,18 @@ func NewEngine() *Engine {
 func (e *Engine) Evaluate(
 	request contract.EngineeringEvaluationRequest,
 ) (contract.EngineeringEvaluationResponse, error) {
+	if request.ContractVersion == "" {
+		return contract.EngineeringEvaluationResponse{}, fmt.Errorf(
+			"contract version is required",
+		)
+	}
+
+	if request.MeasurementID == "" {
+		return contract.EngineeringEvaluationResponse{}, fmt.Errorf(
+			"measurement ID is required",
+		)
+	}
+
 	if request.EngineeringProfileID == "" {
 		return contract.EngineeringEvaluationResponse{}, fmt.Errorf(
 			"engineering profile is required",
@@ -26,10 +38,11 @@ func (e *Engine) Evaluate(
 
 	// Start with a neutral evaluation until profile rules are applied.
 	response := contract.EngineeringEvaluationResponse{
-		ContractVersion:      request.ContractVersion,
-		MeasurementID:        request.MeasurementID,
-		Status:               "pending",
-		Score:                0,
+		ContractVersion:       request.ContractVersion,
+		MeasurementID:         request.MeasurementID,
+		EngineeringProfileID:  request.EngineeringProfileID,
+		Status:                "pending",
+		Score:                 0,
 		RequiresVerification: true,
 	}
 
