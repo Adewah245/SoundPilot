@@ -104,3 +104,105 @@ func (r *MeasurementRepository) SaveMeasurement(
 
 	return nil
 }
+
+// GetMeasurement retrieves one measurement and its frequency data.
+func (r *MeasurementRepository) GetMeasurement(
+	ctx context.Context,
+	measurementID string,
+) (domain.Measurement, error) {
+	if r.db == nil || r.db.Pool == nil {
+		return domain.Measurement{}, fmt.Errorf("database is not configured")
+	}
+
+	var measurement domain.Measurement
+
+	err := r.db.Pool.QueryRow(
+		ctx,
+		`SELECT
+			id,
+			session_id,
+			venue_id,
+			zone_id,
+			measurement_point_id,
+			source,
+			rms_decibels,
+			peak_decibels,
+			noise_level,
+			distortion_level,
+			clipping_detected,
+			feedback_detected,
+			duration_seconds,
+			sample_rate,
+			channels,
+			created_at
+		FROM measurements
+		WHERE id = $1`,
+		measurementID,
+	).Scan(
+		&measurement.ID,
+		&measurement.SessionID,
+		&measurement.VenueID,
+		&measurement.ZoneID,
+		&measurement.MeasurementPointID,
+		&measurement.Source,
+		&measurement.RMSDecibels,
+		&measurement.PeakDecibels,
+		&measurement.NoiseLevel,
+		&measurement.DistortionLevel,
+		&measurement.ClippingDetected,
+		&measurement.FeedbackDetected,
+		&measurement.DurationSeconds,
+		&measurement.SampleRate,
+		&measurement.Channels,
+		&measurement.CreatedAt,
+	)
+	if err != nil {
+		return domain.Measurement{}, fmt.Errorf("get measurement: %w", err)
+	}
+
+	rows, err := r.db.Pool.Query(
+		ctx,
+		`SELECT
+			frequency_hz,
+			level_db
+		FROM measurement_frequencies
+		WHERE measurement_id = $1
+		ORDER BY frequency_hz`,
+		measurementID,
+	)
+	if err != nil {
+		return domain.Measurement{}, fmt.Errorf(
+			"get measurement frequencies: %w",
+			err,
+		)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var frequency domain.FrequencyMeasurement
+
+		if err := rows.Scan(
+			&frequency.FrequencyHz,
+			&frequency.LevelDB,
+		); err != nil {
+			return domain.Measurement{}, fmt.Errorf(
+				"scan measurement frequency: %w",
+				err,
+			)
+		}
+
+		measurement.FrequencyData = append(
+			measurement.FrequencyData,
+			frequency,
+		)
+	}
+
+	if err := rows.Err(); err != nil {
+		return domain.Measurement{}, fmt.Errorf(
+			"read measurement frequencies: %w",
+			err,
+		)
+	}
+
+	return measurement, nil
+}
