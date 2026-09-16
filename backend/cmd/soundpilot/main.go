@@ -33,8 +33,14 @@ func main() {
 		cfg.DSPRunnerPath,
 	)
 
+	// Create the measurement repository.
+	measurementRepository := storage.NewMeasurementRepository(db)
+
 	// Create the measurement service.
-	measurementService := measurement.NewService(dspEngine)
+	measurementService := measurement.NewService(
+		dspEngine,
+		measurementRepository,
+	)
 
 	// Create the engineering engine and service.
 	engineeringEngine := engineering.NewEngine()
