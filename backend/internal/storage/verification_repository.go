@@ -26,7 +26,7 @@ func (r *VerificationRepository) SaveVerification(
 	request contract.VerificationRequest,
 	response contract.VerificationResponse,
 ) error {
-	if r == nil || r.db == nil {
+	if r == nil || r.db == nil || r.db.Pool == nil {
 		return fmt.Errorf("verification repository is not configured")
 	}
 

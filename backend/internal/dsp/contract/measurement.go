@@ -13,6 +13,10 @@ type MeasurementRequest struct {
 	// AudioSource identifies where the audio comes from.
 	AudioSource string `json:"audio_source"`
 
+	// AudioDevice identifies the input device used for measurement.
+	// A value of -1 means use the system default input device.
+	AudioDevice int `json:"audio_device"`
+
 	// DurationSeconds tells Python how long to analyse the audio.
 	DurationSeconds float64 `json:"duration_seconds"`
 

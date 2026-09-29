@@ -1,6 +1,7 @@
 """JSON runner for the SoundPilot DSP engine."""
 
 import json
+import math
 import sys
 from datetime import datetime, timezone
 
@@ -23,14 +24,44 @@ def main() -> None:
 
     request = json.load(sys.stdin)
 
+    request_contract_version = request.get("contract_version")
+
+    if request_contract_version != CONTRACT_VERSION:
+        raise ValueError(
+            f"unsupported contract version: {request_contract_version!r}; "
+            f"expected {CONTRACT_VERSION!r}"
+        )
+
     duration_seconds = float(request["duration_seconds"])
     sample_rate = int(request.get("sample_rate", 44100))
     channels = int(request.get("channels", 1))
 
+    if not math.isfinite(duration_seconds) or duration_seconds <= 0:
+        raise ValueError(
+            "duration_seconds must be a finite value greater than 0"
+        )
+
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be greater than 0")
+
+    if channels <= 0:
+        raise ValueError("channels must be greater than 0")
+
+    audio_device = int(request.get("audio_device", -1))
+
+    if audio_device < -1:
+        raise ValueError("audio_device must be -1 or a valid device index")
+    sample_count = int(duration_seconds * sample_rate)
+
+    if sample_count < 1:
+        raise ValueError(
+            "duration_seconds and sample_rate must produce at least one sample"
+    )
+
     audio = record_audio(
-        duration_seconds=duration_seconds,
-        sample_rate=sample_rate,
-        channels=channels,
+    duration_seconds=duration_seconds,
+    sample_rate=sample_rate,
+    channels=channels,
     )
 
     features = extract_features(
@@ -50,9 +81,7 @@ def main() -> None:
     frequency_data = [
         {
             "frequency_hz": float(frequency),
-            "level_db": float(
-                20 * np.log10(max(magnitude, 1e-12))
-            ),
+            "level_db": float(magnitude),
         }
         for frequency, magnitude in zip(
             features["frequencies"],

@@ -1,6 +1,10 @@
 package measurement
 
-import "github.com/Adewah245/SoundPilot/backend/internal/dsp/contract"
+import (
+	"fmt"
+
+	"github.com/Adewah245/SoundPilot/backend/internal/dsp/contract"
+)
 
 // ValidateRequest validates a measurement request before DSP processing.
 func ValidateRequest(request contract.MeasurementRequest) error {
@@ -36,8 +40,8 @@ func ValidateRequest(request contract.MeasurementRequest) error {
 		return &ValidationError{Message: "sample rate must be greater than zero"}
 	}
 
-	if request.Channels <= 0 {
-		return &ValidationError{Message: "channels must be greater than zero"}
+	if request.AudioDevice < -1 {
+		return fmt.Errorf("audio device must be -1 or a valid device index")
 	}
 
 	return nil
