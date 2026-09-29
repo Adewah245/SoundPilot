@@ -82,8 +82,8 @@ type Baseline struct {
 
 // FrequencyMeasurement represents one measured frequency and its level.
 type FrequencyMeasurement struct {
-        FrequencyHz float64 `json:"frequency_hz"`
-        LevelDB     float64 `json:"level_db"`
+	FrequencyHz float64 `json:"frequency_hz"`
+	LevelDB     float64 `json:"level_db"`
 }
 
 // Measurement represents a measurement produced by the DSP engine.
@@ -95,8 +95,8 @@ type Measurement struct {
 	MeasurementPointID string `json:"measurement_point_id"`
 	Source             string `json:"source"`
 
-	RMSDecibels   float64   `json:"rms_decibels"`
-	PeakDecibels  float64   `json:"peak_decibels"`
+	RMSDecibels   float64                `json:"rms_decibels"`
+	PeakDecibels  float64                `json:"peak_decibels"`
 	FrequencyData []FrequencyMeasurement `json:"frequency_data,omitempty"`
 
 	NoiseLevel      float64 `json:"noise_level,omitempty"`
@@ -143,15 +143,24 @@ type Verification struct {
 }
 
 // EngineeringProfile defines the engineering expectations used for evaluation.
+// EngineeringProfile defines the engineering expectations used for evaluation.
 type EngineeringProfile struct {
-	ID              string    `json:"id"`
-	Name            string    `json:"name"`
-	Description     string    `json:"description,omitempty"`
-	Version         string    `json:"version"`
-	DurationSeconds float64   `json:"duration_seconds"`
-	SampleRate      int       `json:"sample_rate"`
-	Channels        int       `json:"channels"`
-	CreatedAt       time.Time `json:"created_at"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+
+	Description string `json:"description,omitempty"`
+	Version     string `json:"version"`
+
+	RMSTarget           *float64 `json:"rms_target,omitempty"`
+	RMSTolerance        *float64 `json:"rms_tolerance,omitempty"`
+	PeakTarget          *float64 `json:"peak_target,omitempty"`
+	PeakTolerance       *float64 `json:"peak_tolerance,omitempty"`
+	NoiseTarget         *float64 `json:"noise_target,omitempty"`
+	NoiseTolerance      *float64 `json:"noise_tolerance,omitempty"`
+	DistortionTarget    *float64 `json:"distortion_target,omitempty"`
+	DistortionTolerance *float64 `json:"distortion_tolerance,omitempty"`
+
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // EngineeringResult represents the engineering interpretation of a measurement.

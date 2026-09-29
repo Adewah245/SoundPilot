@@ -3,7 +3,6 @@ package measurement
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/Adewah245/SoundPilot/backend/internal/domain"
@@ -109,7 +108,12 @@ func (s *Service) Measure(
 	}
 
 	// Store the completed measurement in PostgreSQL.
-	log.Println("MEASUREMENT SAVED")
+	if err := s.repository.SaveMeasurement(ctx, measurement); err != nil {
+		return domain.Measurement{}, fmt.Errorf(
+			"save measurement: %w",
+			err,
+		)
+	}
 
 	return measurement, nil
 }

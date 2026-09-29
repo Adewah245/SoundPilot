@@ -68,8 +68,12 @@ func main() {
 	)
 
 	// Create the verification repository and service.
+	// Create the verification repository and service.
 	verificationRepository := storage.NewVerificationRepository(db)
-	verificationService := verification.NewService()
+	verificationService := verification.NewService(
+		measurementRepository,
+		engineeringRepository,
+	)
 
 	// Create the HTTP server.
 	appServer := server.NewServer(

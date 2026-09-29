@@ -45,9 +45,6 @@ func (h *Handler) VerifyHandler(w http.ResponseWriter, r *http.Request) {
 	response, err := h.service.Verify(
 		r.Context(),
 		request,
-		0,
-		"pending",
-		"Verification is pending engineering evaluation.",
 	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
