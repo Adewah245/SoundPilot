@@ -7,6 +7,7 @@ import (
 
 	engineeringapi "github.com/Adewah245/SoundPilot/backend/internal/api/engineering"
 	measurementapi "github.com/Adewah245/SoundPilot/backend/internal/api/measurement"
+	measurementpointapi "github.com/Adewah245/SoundPilot/backend/internal/api/measurementpoint"
 	verificationapi "github.com/Adewah245/SoundPilot/backend/internal/api/verification"
 	"github.com/Adewah245/SoundPilot/backend/internal/engineering"
 	"github.com/Adewah245/SoundPilot/backend/internal/measurement"
@@ -16,14 +17,15 @@ import (
 
 // Server represents the SoundPilot HTTP server.
 type Server struct {
-	port                   string
-	db                     *storage.Database
-	measurementService     *measurement.Service
-	measurementRepository  *storage.MeasurementRepository
-	engineeringService     *engineering.Service
-	engineeringRepository  *storage.EngineeringRepository
-	verificationService    *verification.Service
-	verificationRepository *storage.VerificationRepository
+	port                       string
+	db                         *storage.Database
+	measurementService         *measurement.Service
+	measurementRepository      *storage.MeasurementRepository
+	measurementPointRepository *storage.MeasurementPointRepository
+	engineeringService         *engineering.Service
+	engineeringRepository      *storage.EngineeringRepository
+	verificationService        *verification.Service
+	verificationRepository     *storage.VerificationRepository
 }
 
 // NewServer creates the SoundPilot HTTP server.
@@ -32,20 +34,22 @@ func NewServer(
 	db *storage.Database,
 	measurementService *measurement.Service,
 	measurementRepository *storage.MeasurementRepository,
+	measurementPointRepository *storage.MeasurementPointRepository,
 	engineeringService *engineering.Service,
 	engineeringRepository *storage.EngineeringRepository,
 	verificationService *verification.Service,
 	verificationRepository *storage.VerificationRepository,
 ) *Server {
 	return &Server{
-		port:                   port,
-		db:                     db,
-		measurementService:     measurementService,
-		measurementRepository:  measurementRepository,
-		engineeringService:     engineeringService,
-		engineeringRepository:  engineeringRepository,
-		verificationService:    verificationService,
-		verificationRepository: verificationRepository,
+		port:                       port,
+		db:                         db,
+		measurementService:         measurementService,
+		measurementRepository:      measurementRepository,
+		measurementPointRepository: measurementPointRepository,
+		engineeringService:         engineeringService,
+		engineeringRepository:      engineeringRepository,
+		verificationService:        verificationService,
+		verificationRepository:     verificationRepository,
 	}
 }
 
@@ -62,6 +66,21 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/measurements", measurementHandler.MeasureHandler)
 	mux.HandleFunc("/measurements/", measurementHandler.GetMeasurementHandler)
 
+	// Measurement point routes.
+	measurementPointHandler := measurementpointapi.NewHandler(
+		s.measurementPointRepository,
+	)
+
+	mux.HandleFunc(
+		"/measurement-points",
+		measurementPointHandler.CollectionHandler,
+	)
+
+	mux.HandleFunc(
+		"/measurement-points/",
+		measurementPointHandler.GetMeasurementPointHandler,
+	)
+
 	// Engineering routes.
 	engineeringHandler := engineeringapi.NewHandler(
 		s.engineeringService,
@@ -77,6 +96,7 @@ func (s *Server) Start() error {
 		"/engineering/results/",
 		engineeringHandler.GetResultHandler,
 	)
+
 	// Verification route.
 	verificationHandler := verificationapi.NewHandler(
 		s.verificationService,
@@ -87,6 +107,7 @@ func (s *Server) Start() error {
 		"/verification",
 		verificationHandler.VerifyHandler,
 	)
+
 	// Health route.
 	mux.HandleFunc("/health", s.healthHandler)
 

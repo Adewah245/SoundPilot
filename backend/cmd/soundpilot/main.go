@@ -20,6 +20,7 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Printf("warning: .env file not loaded: %v", err)
 	}
+
 	// Load application configuration.
 	cfg, err := config.Load()
 	if err != nil {
@@ -44,6 +45,7 @@ func main() {
 	}
 
 	log.Println("CONNECTED DATABASE:", dbName)
+
 	// Create the Python DSP engine.
 	dspEngine := dsp.NewEngine(
 		cfg.PythonPath,
@@ -59,6 +61,9 @@ func main() {
 		measurementRepository,
 	)
 
+	// Create the measurement point repository.
+	measurementPointRepository := storage.NewMeasurementPointRepository(db)
+
 	// Create the engineering engine and service.
 	engineeringEngine := engineering.NewEngine()
 	engineeringRepository := storage.NewEngineeringRepository(db)
@@ -67,7 +72,6 @@ func main() {
 		engineeringRepository,
 	)
 
-	// Create the verification repository and service.
 	// Create the verification repository and service.
 	verificationRepository := storage.NewVerificationRepository(db)
 	verificationService := verification.NewService(
@@ -81,6 +85,7 @@ func main() {
 		db,
 		measurementService,
 		measurementRepository,
+		measurementPointRepository,
 		engineeringService,
 		engineeringRepository,
 		verificationService,
