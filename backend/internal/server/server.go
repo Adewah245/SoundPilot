@@ -6,8 +6,10 @@ import (
 	"net/http"
 
 	engineeringapi "github.com/Adewah245/SoundPilot/backend/internal/api/engineering"
+	equipmentapi "github.com/Adewah245/SoundPilot/backend/internal/api/equipment"
 	measurementapi "github.com/Adewah245/SoundPilot/backend/internal/api/measurement"
 	measurementpointapi "github.com/Adewah245/SoundPilot/backend/internal/api/measurementpoint"
+	signalchainapi "github.com/Adewah245/SoundPilot/backend/internal/api/signalchain"
 	verificationapi "github.com/Adewah245/SoundPilot/backend/internal/api/verification"
 	"github.com/Adewah245/SoundPilot/backend/internal/engineering"
 	"github.com/Adewah245/SoundPilot/backend/internal/measurement"
@@ -26,6 +28,8 @@ type Server struct {
 	engineeringRepository      *storage.EngineeringRepository
 	verificationService        *verification.Service
 	verificationRepository     *storage.VerificationRepository
+	equipmentRepository        *storage.EquipmentRepository
+	signalChainRepository      *storage.SignalChainRepository
 }
 
 // NewServer creates the SoundPilot HTTP server.
@@ -39,6 +43,8 @@ func NewServer(
 	engineeringRepository *storage.EngineeringRepository,
 	verificationService *verification.Service,
 	verificationRepository *storage.VerificationRepository,
+	equipmentRepository *storage.EquipmentRepository,
+	signalChainRepository *storage.SignalChainRepository,
 ) *Server {
 	return &Server{
 		port:                       port,
@@ -50,6 +56,8 @@ func NewServer(
 		engineeringRepository:      engineeringRepository,
 		verificationService:        verificationService,
 		verificationRepository:     verificationRepository,
+		equipmentRepository:        equipmentRepository,
+		signalChainRepository:      signalChainRepository,
 	}
 }
 
@@ -81,6 +89,25 @@ func (s *Server) Start() error {
 		measurementPointHandler.GetMeasurementPointHandler,
 	)
 
+	equipmentHandler := equipmentapi.NewHandler(
+		s.equipmentRepository,
+	)
+
+	mux.HandleFunc(
+		"/equipment",
+		equipmentHandler.CollectionHandler,
+	)
+
+	mux.HandleFunc(
+		"/equipment/",
+		equipmentHandler.GetEquipmentHandler,
+	)
+
+	signalChainHandler := signalchainapi.NewHandler(
+		s.signalChainRepository,
+	)
+	mux.HandleFunc("/signal-chains", signalChainHandler.CollectionHandler)
+	mux.HandleFunc("/signal-chains/", signalChainHandler.GetSignalChainHandler)
 	// Engineering routes.
 	engineeringHandler := engineeringapi.NewHandler(
 		s.engineeringService,

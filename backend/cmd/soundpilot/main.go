@@ -63,7 +63,8 @@ func main() {
 
 	// Create the measurement point repository.
 	measurementPointRepository := storage.NewMeasurementPointRepository(db)
-
+	equipmentRepository := storage.NewEquipmentRepository(db)
+	signalChainRepository := storage.NewSignalChainRepository(db)
 	// Create the engineering engine and service.
 	engineeringEngine := engineering.NewEngine()
 	engineeringRepository := storage.NewEngineeringRepository(db)
@@ -90,6 +91,8 @@ func main() {
 		engineeringRepository,
 		verificationService,
 		verificationRepository,
+		equipmentRepository,
+		signalChainRepository,
 	)
 
 	// Start the SoundPilot server.
