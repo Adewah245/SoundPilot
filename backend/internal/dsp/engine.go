@@ -158,7 +158,19 @@ func (e *Engine) Measure(
 			"DSP response channels must be greater than 0",
 		)
 	}
+	for _, frequency := range response.FrequencyData {
+		if !isFinite(frequency.FrequencyHz) {
+			return contract.MeasurementResponse{}, fmt.Errorf(
+				"DSP response contains an invalid frequency value",
+			)
+		}
 
+		if !isFinite(frequency.LevelDB) {
+			return contract.MeasurementResponse{}, fmt.Errorf(
+				"DSP response contains an invalid frequency level",
+			)
+		}
+	}
 	return response, nil
 }
 

@@ -1,15 +1,16 @@
 package measurement
 
 import (
-	"encoding/json"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
 
-	"github.com/Adewah245/SoundPilot/backend/internal/dsp/contract"
 	"github.com/Adewah245/SoundPilot/backend/internal/domain"
+	"github.com/Adewah245/SoundPilot/backend/internal/dsp/contract"
 	measurementservice "github.com/Adewah245/SoundPilot/backend/internal/measurement"
+	"github.com/jackc/pgx/v5"
 )
 
 // Handler handles SoundPilot measurement API requests.
@@ -127,6 +128,15 @@ func (h *Handler) GetMeasurementHandler(
 		measurementID,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(
+				w,
+				"measurement not found",
+				http.StatusNotFound,
+			)
+			return
+		}
+
 		http.Error(
 			w,
 			err.Error(),

@@ -5,10 +5,12 @@ import (
 	"log"
 	"net/http"
 
+	baselineapi "github.com/Adewah245/SoundPilot/backend/internal/api/baseline"
 	engineeringapi "github.com/Adewah245/SoundPilot/backend/internal/api/engineering"
 	equipmentapi "github.com/Adewah245/SoundPilot/backend/internal/api/equipment"
 	measurementapi "github.com/Adewah245/SoundPilot/backend/internal/api/measurement"
 	measurementpointapi "github.com/Adewah245/SoundPilot/backend/internal/api/measurementpoint"
+	sessionapi "github.com/Adewah245/SoundPilot/backend/internal/api/session"
 	signalchainapi "github.com/Adewah245/SoundPilot/backend/internal/api/signalchain"
 	venueapi "github.com/Adewah245/SoundPilot/backend/internal/api/venue"
 	verificationapi "github.com/Adewah245/SoundPilot/backend/internal/api/verification"
@@ -34,6 +36,8 @@ type Server struct {
 	signalChainRepository      *storage.SignalChainRepository
 	venueRepository            *storage.VenueRepository
 	zoneRepository             *storage.ZoneRepository
+	baselineRepository         *storage.BaselineRepository
+	sessionRepository          *storage.SessionRepository
 }
 
 // NewServer creates the SoundPilot HTTP server.
@@ -51,6 +55,8 @@ func NewServer(
 	signalChainRepository *storage.SignalChainRepository,
 	venueRepository *storage.VenueRepository,
 	zoneRepository *storage.ZoneRepository,
+	baselineRepository *storage.BaselineRepository,
+	sessionRepository *storage.SessionRepository,
 
 ) *Server {
 	return &Server{
@@ -67,6 +73,8 @@ func NewServer(
 		equipmentRepository:        equipmentRepository,
 		signalChainRepository:      signalChainRepository,
 		zoneRepository:             zoneRepository,
+		baselineRepository:         baselineRepository,
+		sessionRepository:          sessionRepository,
 	}
 }
 
@@ -120,9 +128,34 @@ func (s *Server) Start() error {
 		"/equipment/",
 		equipmentHandler.GetEquipmentHandler,
 	)
+	baselineHandler := baselineapi.NewHandler(
+		s.baselineRepository,
+	)
 
+	mux.HandleFunc(
+		"/baselines",
+		baselineHandler.CollectionHandler,
+	)
+
+	mux.HandleFunc(
+		"/baselines/",
+		baselineHandler.GetBaselineHandler,
+	)
 	signalChainHandler := signalchainapi.NewHandler(
 		s.signalChainRepository,
+	)
+	sessionHandler := sessionapi.NewHandler(
+		s.sessionRepository,
+	)
+
+	mux.HandleFunc(
+		"/sessions",
+		sessionHandler.CollectionHandler,
+	)
+
+	mux.HandleFunc(
+		"/sessions/",
+		sessionHandler.GetSessionHandler,
 	)
 	mux.HandleFunc("/signal-chains", signalChainHandler.CollectionHandler)
 	mux.HandleFunc("/signal-chains/", signalChainHandler.GetSignalChainHandler)

@@ -102,10 +102,6 @@ func (r *MeasurementRepository) SaveMeasurement(
 		return fmt.Errorf("commit measurement transaction: %w", err)
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit measurement transaction: %w", err)
-	}
-
 	return nil
 }
 
