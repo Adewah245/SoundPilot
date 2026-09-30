@@ -10,7 +10,9 @@ import (
 	measurementapi "github.com/Adewah245/SoundPilot/backend/internal/api/measurement"
 	measurementpointapi "github.com/Adewah245/SoundPilot/backend/internal/api/measurementpoint"
 	signalchainapi "github.com/Adewah245/SoundPilot/backend/internal/api/signalchain"
+	venueapi "github.com/Adewah245/SoundPilot/backend/internal/api/venue"
 	verificationapi "github.com/Adewah245/SoundPilot/backend/internal/api/verification"
+	zoneapi "github.com/Adewah245/SoundPilot/backend/internal/api/zone"
 	"github.com/Adewah245/SoundPilot/backend/internal/engineering"
 	"github.com/Adewah245/SoundPilot/backend/internal/measurement"
 	"github.com/Adewah245/SoundPilot/backend/internal/storage"
@@ -30,6 +32,8 @@ type Server struct {
 	verificationRepository     *storage.VerificationRepository
 	equipmentRepository        *storage.EquipmentRepository
 	signalChainRepository      *storage.SignalChainRepository
+	venueRepository            *storage.VenueRepository
+	zoneRepository             *storage.ZoneRepository
 }
 
 // NewServer creates the SoundPilot HTTP server.
@@ -45,6 +49,9 @@ func NewServer(
 	verificationRepository *storage.VerificationRepository,
 	equipmentRepository *storage.EquipmentRepository,
 	signalChainRepository *storage.SignalChainRepository,
+	venueRepository *storage.VenueRepository,
+	zoneRepository *storage.ZoneRepository,
+
 ) *Server {
 	return &Server{
 		port:                       port,
@@ -52,12 +59,14 @@ func NewServer(
 		measurementService:         measurementService,
 		measurementRepository:      measurementRepository,
 		measurementPointRepository: measurementPointRepository,
+		venueRepository:            venueRepository,
 		engineeringService:         engineeringService,
 		engineeringRepository:      engineeringRepository,
 		verificationService:        verificationService,
 		verificationRepository:     verificationRepository,
 		equipmentRepository:        equipmentRepository,
 		signalChainRepository:      signalChainRepository,
+		zoneRepository:             zoneRepository,
 	}
 }
 
@@ -89,10 +98,19 @@ func (s *Server) Start() error {
 		measurementPointHandler.GetMeasurementPointHandler,
 	)
 
+	venueHandler := venueapi.NewHandler(
+		s.venueRepository,
+	)
+	mux.HandleFunc("/venues", venueHandler.CollectionHandler)
+	mux.HandleFunc("/venues/", venueHandler.GetVenueHandler)
 	equipmentHandler := equipmentapi.NewHandler(
 		s.equipmentRepository,
 	)
-
+	zoneHandler := zoneapi.NewHandler(
+		s.zoneRepository,
+	)
+	mux.HandleFunc("/zones", zoneHandler.CollectionHandler)
+	mux.HandleFunc("/zones/", zoneHandler.GetZoneHandler)
 	mux.HandleFunc(
 		"/equipment",
 		equipmentHandler.CollectionHandler,
