@@ -1,11 +1,5 @@
 // SoundPilot — Domain Types
-// These types represent the data model the Go API returns.
-// The frontend is a client of the existing Go API; these types
-// mirror the API contract for type-safe consumption.
-
-// ---------------------------------------------------------------------------
-// Venue → Zone → Measurement Point hierarchy
-// ---------------------------------------------------------------------------
+// These types mirror the Go backend domain models and API contracts.
 
 // ---------------------------------------------------------------------------
 // Venue → Zone → Measurement Point hierarchy
@@ -49,7 +43,7 @@ export type MeasurementPointStatus =
   | 'idle';
 
 // ---------------------------------------------------------------------------
-// Equipment & Signal Chain
+// Equipment
 // ---------------------------------------------------------------------------
 
 export type EquipmentType =
@@ -62,20 +56,36 @@ export type EquipmentType =
   | 'processor'
   | 'monitor';
 
+export type EquipmentStatus =
+  | 'active'
+  | 'standby'
+  | 'fault'
+  | 'offline';
+
 export interface Equipment {
   id: string;
-  venueId: string;
   name: string;
-  type: EquipmentType;
-  brand: string;
-  model: string;
-  quantity: number;
-  status: EquipmentStatus;
-  specs: Record<string, string>;
-  notes: string;
+  type: EquipmentType | string;
+  manufacturer?: string;
+  model?: string;
+  location?: string;
+  description?: string;
+  duration_seconds?: number;
+  sample_rate?: number;
+  channels?: number;
+  created_at: string;
+  updated_at: string;
 }
 
-export type EquipmentStatus = 'active' | 'standby' | 'fault' | 'offline';
+// ---------------------------------------------------------------------------
+// Signal Chain
+// ---------------------------------------------------------------------------
+
+export interface SignalChain {
+  id: string;
+  name: string;
+  equipment: string[];
+}
 
 export interface SignalChainNode {
   id: string;
@@ -85,30 +95,46 @@ export interface SignalChainNode {
   order: number;
 }
 
-export interface SignalChain {
-  id: string;
-  venueId: string;
-  name: string;
-  nodes: SignalChainNode[];
-}
-
 // ---------------------------------------------------------------------------
 // Measurement
 // ---------------------------------------------------------------------------
 
-export type MeasurementStatus = 'running' | 'stopped' | 'saved' | 'failed';
+export interface MeasurementFrequencyData {
+  frequency_hz: number;
+  level_db: number;
+}
 
 export interface Measurement {
   id: string;
-  sessionId: string;
-  measurementPointId: string;
-  status: MeasurementStatus;
-  timestamp: string;
-  durationSec: number;
-  metrics: MeasurementMetrics;
-  waveform: number[];
-  spectrum: SpectrumBin[];
+
+  session_id: string;
+  venue_id: string;
+  zone_id: string;
+  measurement_point_id: string;
+
+  source: string;
+
+  rms_decibels: number;
+  peak_decibels: number;
+
+  frequency_data: MeasurementFrequencyData[];
+
+  noise_level: number;
+  distortion_level: number;
+
+  clipping_detected: boolean;
+  feedback_detected: boolean;
+
+  duration_seconds: number;
+  sample_rate: number;
+  channels: number;
+
+  created_at: string;
 }
+
+// ---------------------------------------------------------------------------
+// Frontend Measurement Display Types
+// ---------------------------------------------------------------------------
 
 export interface MeasurementMetrics {
   rms: number;
@@ -124,11 +150,20 @@ export interface SpectrumBin {
   magnitude: number;
 }
 
+export type MeasurementStatus =
+  | 'running'
+  | 'stopped'
+  | 'saved'
+  | 'failed';
+
 // ---------------------------------------------------------------------------
 // Session
 // ---------------------------------------------------------------------------
 
-export type SessionStatus = 'active' | 'completed' | 'archived';
+export type SessionStatus =
+  | 'active'
+  | 'completed'
+  | 'archived';
 
 export interface Session {
   id: string;
@@ -176,13 +211,14 @@ export interface EngineeringResult {
   recommendation: string;
 }
 
-export type EngineeringStatus = 'accepted' | 'needs_adjustment' | 'rejected';
+export type EngineeringStatus =
+  | 'accepted'
+  | 'needs_adjustment'
+  | 'rejected';
 
 // ---------------------------------------------------------------------------
-// Verification (Baseline → Change → Measure → Compare → Verify)
+// Baseline
 // ---------------------------------------------------------------------------
-
-export type VerificationStatus = 'accepted' | 'needs_adjustment' | 'rejected';
 
 export interface Baseline {
   id: string;
@@ -192,6 +228,15 @@ export interface Baseline {
   capturedAt: string;
   label: string;
 }
+
+// ---------------------------------------------------------------------------
+// Verification
+// ---------------------------------------------------------------------------
+
+export type VerificationStatus =
+  | 'accepted'
+  | 'needs_adjustment'
+  | 'rejected';
 
 export interface Verification {
   id: string;
@@ -213,7 +258,10 @@ export interface Verification {
 // Alerts
 // ---------------------------------------------------------------------------
 
-export type AlertSeverity = 'info' | 'warning' | 'critical';
+export type AlertSeverity =
+  | 'info'
+  | 'warning'
+  | 'critical';
 
 export interface Alert {
   id: string;
@@ -228,7 +276,7 @@ export interface Alert {
 }
 
 // ---------------------------------------------------------------------------
-// Smart Suggestion
+// Smart Suggestions
 // ---------------------------------------------------------------------------
 
 export interface SmartSuggestion {
@@ -237,7 +285,12 @@ export interface SmartSuggestion {
   description: string;
   action: string;
   priority: 'high' | 'medium' | 'low';
-  category: 'level' | 'eq' | 'feedback' | 'coverage' | 'safety';
+  category:
+    | 'level'
+    | 'eq'
+    | 'feedback'
+    | 'coverage'
+    | 'safety';
 }
 
 // ---------------------------------------------------------------------------

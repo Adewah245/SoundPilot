@@ -5,6 +5,7 @@ export interface AudioCaptureData {
   frequency: Uint8Array;
   rms: number;
   peak: number;
+  sampleRate: number;
 }
 
 interface UseAudioCaptureResult {
@@ -109,7 +110,9 @@ export function useAudioCapture(): UseAudioCaptureResult {
           }
         }
 
-        const rmsLinear = Math.sqrt(sumSquares / waveform.length);
+        const rmsLinear = Math.sqrt(
+          sumSquares / waveform.length,
+        );
 
         const rms =
           rmsLinear > 0
@@ -126,6 +129,7 @@ export function useAudioCapture(): UseAudioCaptureResult {
           frequency: new Uint8Array(frequency),
           rms,
           peak: peakDb,
+          sampleRate: audioContext.sampleRate,
         });
 
         animationFrameRef.current =

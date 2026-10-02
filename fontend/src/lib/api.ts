@@ -1,6 +1,6 @@
 // SoundPilot API Service Layer
 // Client for the existing Go API.
-// Uses VITE_API_BASE_URL for configuration.
+// Backend contract remains the source of truth.
 
 import type {
   Alert,
@@ -21,7 +21,9 @@ import type {
 
 import * as mock from './mock-data';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as
+  | string
+  | undefined;
 
 export interface ApiResponse<T> {
   data: T;
@@ -33,7 +35,9 @@ async function fetchApi<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T | null> {
-  if (!API_BASE_URL) return null;
+  if (!API_BASE_URL) {
+    return null;
+  }
 
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -45,7 +49,9 @@ async function fetchApi<T>(
     });
 
     if (!response.ok) {
-      throw new Error(`API ${response.status}: ${response.statusText}`);
+      throw new Error(
+        `API ${response.status}: ${response.statusText}`,
+      );
     }
 
     return (await response.json()) as T;
@@ -79,7 +85,9 @@ function delay(ms: number): Promise<void> {
 export async function getVenues(): Promise<ApiResponse<Venue[]>> {
   const live = await fetchApi<Venue[]>('/venues');
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(300);
 
@@ -91,7 +99,9 @@ export async function getVenue(
 ): Promise<ApiResponse<Venue | null>> {
   const live = await fetchApi<Venue>(`/venues/${id}`);
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(200);
 
@@ -111,7 +121,9 @@ export async function getZones(
     `/zones?venue_id=${encodeURIComponent(venueId)}`,
   );
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(200);
 
@@ -131,7 +143,9 @@ export async function getMeasurementPoints(
     `/measurement-points?zone_id=${encodeURIComponent(zoneId)}`,
   );
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(200);
 
@@ -151,9 +165,15 @@ export async function getAllMeasurementPoints(
     zones.data.map((zone) => getMeasurementPoints(zone.id)),
   );
 
-  return withDemo(
-    results.flatMap((result) => result.data),
-  );
+  const points = results.flatMap((result) => result.data);
+
+  const hasLiveData =
+    !zones.isDemo &&
+    results.every((result) => !result.isDemo);
+
+  return hasLiveData
+    ? withLive(points)
+    : withDemo(points);
 }
 
 // ---------------------------------------------------------------------------
@@ -164,16 +184,18 @@ export async function getMeasurements(
   sessionId: string,
 ): Promise<ApiResponse<Measurement[]>> {
   const live = await fetchApi<Measurement[]>(
-    `/sessions/${sessionId}/measurements`,
+    `/sessions/${encodeURIComponent(sessionId)}/measurements`,
   );
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(300);
 
   return withDemo(
     mock.mockMeasurements.filter(
-      (measurement) => measurement.sessionId === sessionId,
+      (measurement) => measurement.session_id === sessionId,
     ),
   );
 }
@@ -185,11 +207,66 @@ export async function getLatestMeasurement(): Promise<
     '/measurements/latest',
   );
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(200);
 
-  return withDemo(mock.latestMeasurement);
+  return withDemo(mock.latestMeasurement ?? null);
+}
+
+// ---------------------------------------------------------------------------
+// Create Measurement
+// ---------------------------------------------------------------------------
+
+export interface CreateMeasurementRequest {
+  contract_version: string;
+  session_id: string;
+  venue_id: string;
+  zone_id: string;
+  measurement_point_id: string;
+  audio_source: string;
+  audio_device: number;
+  duration_seconds: number;
+  sample_rate: number;
+  channels: number;
+}
+
+export async function createMeasurement(
+  request: CreateMeasurementRequest,
+): Promise<Measurement | null> {
+  if (!API_BASE_URL) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/measurements`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `API ${response.status}: ${response.statusText}`,
+      );
+    }
+
+    return (await response.json()) as Measurement;
+  } catch (error) {
+    console.error(
+      'SoundPilot measurement request failed:',
+      error,
+    );
+
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -203,15 +280,16 @@ export async function getEquipment(
     `/equipment?venue_id=${encodeURIComponent(venueId)}`,
   );
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(300);
 
-  return withDemo(
-    mock.mockEquipment.filter(
-      (equipment) => equipment.venueId === venueId,
-    ),
-  );
+  // The live API performs venue filtering through the request.
+  // The current Equipment domain type does not contain venue_id,
+  // so demo equipment is returned from the local demo dataset.
+  return withDemo(mock.mockEquipment);
 }
 
 // ---------------------------------------------------------------------------
@@ -231,11 +309,10 @@ export async function getSignalChain(
 
   await delay(200);
 
-  return withDemo(
-    mock.mockSignalChain.find(
-      (signalChain) => signalChain.venueId === venueId,
-    ) ?? null,
-  );
+  // SignalChain currently does not contain venue_id in the
+  // frontend domain type. The backend request above handles
+  // venue filtering when live data is available.
+  return withDemo(mock.mockSignalChain[0] ?? null);
 }
 
 // ---------------------------------------------------------------------------
@@ -251,7 +328,9 @@ export async function getSessions(
 
   const live = await fetchApi<Session[]>(path);
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(300);
 
@@ -275,7 +354,9 @@ export async function getEngineeringProfiles(
     `/engineering/profiles?venue_id=${encodeURIComponent(venueId)}`,
   );
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(200);
 
@@ -289,11 +370,13 @@ export async function getEngineeringProfiles(
 export async function getEngineeringResults(
   sessionId: string,
 ): Promise<ApiResponse<EngineeringResult[]>> {
-  const live = await fetchApi<EngineeringResult[]>(
-    `/engineering/results/${sessionId}`,
+  const live = await fetchApi<EngineeringResult>(
+    `/engineering/results/${encodeURIComponent(sessionId)}`,
   );
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive([live]);
+  }
 
   await delay(300);
 
@@ -315,7 +398,9 @@ export async function getBaselines(
     `/baselines?venue_id=${encodeURIComponent(venueId)}`,
   );
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(200);
 
@@ -337,13 +422,16 @@ export async function getVerifications(
     `/verification?session_id=${encodeURIComponent(sessionId)}`,
   );
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(300);
 
   return withDemo(
     mock.mockVerifications.filter(
-      (verification) => verification.sessionId === sessionId,
+      (verification) =>
+        verification.sessionId === sessionId,
     ),
   );
 }
@@ -361,7 +449,9 @@ export async function getAlerts(
 
   const live = await fetchApi<Alert[]>(path);
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(200);
 
@@ -385,7 +475,9 @@ export async function getSmartSuggestions(): Promise<
     '/suggestions',
   );
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(300);
 
@@ -401,7 +493,9 @@ export async function getSystemHealth(): Promise<
 > {
   const live = await fetchApi<SystemHealth>('/health');
 
-  if (live) return withLive(live);
+  if (live) {
+    return withLive(live);
+  }
 
   await delay(200);
 

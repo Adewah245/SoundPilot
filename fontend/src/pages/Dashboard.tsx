@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+
 import { PageHeader } from '@/components/shared/PageHeader';
 import { MetricCard } from '@/components/shared/MetricCard';
 import { StatusIndicator } from '@/components/shared/StatusIndicator';
 import { AlertBadge } from '@/components/shared/AlertBadge';
 import { DemoBanner } from '@/components/shared/DemoBanner';
 import { Loading, EmptyState } from '@/components/shared/StateViews';
+
 import { VUMeter } from '@/components/audio/VUMeter';
 import { WaveformDisplay } from '@/components/audio/WaveformDisplay';
 import { SpectrumDisplay } from '@/components/audio/SpectrumDisplay';
+
 import {
   LayoutDashboard,
   Activity,
@@ -25,7 +29,9 @@ import {
   CheckCircle2,
   Radio,
 } from 'lucide-react';
+
 import * as api from '@/lib/api';
+
 import type {
   Alert,
   Measurement,
@@ -36,23 +42,42 @@ import type {
   Venue,
   Zone,
 } from '@/types';
+
 import type { PageId } from '@/lib/navigation';
 
 interface DashboardProps {
   onNavigate: (page: PageId) => void;
 }
 
-export function Dashboard({ onNavigate }: DashboardProps) {
+export function Dashboard({
+  onNavigate,
+}: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [isDemo, setIsDemo] = useState(true);
-  const [venue, setVenue] = useState<Venue | null>(null);
-  const [zones, setZones] = useState<Zone[]>([]);
-  const [measurementPoints, setMeasurementPoints] = useState<MeasurementPoint[]>([]);
-  const [session, setSession] = useState<Session | null>(null);
-  const [measurement, setMeasurement] = useState<Measurement | null>(null);
-  const [suggestions, setSuggestions] = useState<SmartSuggestion[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [health, setHealth] = useState<SystemHealth | null>(null);
+
+  const [venue, setVenue] =
+    useState<Venue | null>(null);
+
+  const [zones, setZones] =
+    useState<Zone[]>([]);
+
+  const [measurementPoints, setMeasurementPoints] =
+    useState<MeasurementPoint[]>([]);
+
+  const [session, setSession] =
+    useState<Session | null>(null);
+
+  const [measurement, setMeasurement] =
+    useState<Measurement | null>(null);
+
+  const [suggestions, setSuggestions] =
+    useState<SmartSuggestion[]>([]);
+
+  const [alerts, setAlerts] =
+    useState<Alert[]>([]);
+
+  const [health, setHealth] =
+    useState<SystemHealth | null>(null);
 
   useEffect(() => {
     void loadData();
@@ -77,41 +102,100 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       api.getSystemHealth(),
     ]);
 
-    const [zonesRes, pointsRes] = await Promise.all([
+    const [
+      zonesRes,
+      pointsRes,
+    ] = await Promise.all([
       api.getZones('v-001'),
       api.getAllMeasurementPoints('v-001'),
     ]);
 
     setIsDemo(venueRes.isDemo);
+
     setVenue(venueRes.data);
+
     setZones(zonesRes.data);
+
     setMeasurementPoints(pointsRes.data);
+
     setSession(
-      sessionsRes.data.find((item) => item.status === 'active') ??
+      sessionsRes.data.find(
+        (item) => item.status === 'active',
+      ) ??
         sessionsRes.data[0] ??
         null,
     );
-    setMeasurement(measurementRes.data);
-    setSuggestions(suggestionsRes.data);
-    setAlerts(alertsRes.data.filter((item) => !item.acknowledged));
-    setHealth(healthRes.data);
+
+    setMeasurement(
+      measurementRes.data,
+    );
+
+    setSuggestions(
+      suggestionsRes.data,
+    );
+
+    setAlerts(
+      alertsRes.data.filter(
+        (item) => !item.acknowledged,
+      ),
+    );
+
+    setHealth(
+      healthRes.data,
+    );
+
     setLoading(false);
   }
 
   if (loading) {
-    return <Loading label="Loading system overview..." />;
+    return (
+      <Loading label="Loading system overview..." />
+    );
   }
 
-  const metrics = measurement?.metrics;
-  const unackAlerts = alerts.filter((alert) => !alert.acknowledged);
+  /*
+   * Measurement is now read directly from the backend
+   * measurement model.
+   *
+   * The backend does not expose the old nested `metrics`
+   * object, so Dashboard derives the display metrics here.
+   */
+  const rms = measurement?.rms_decibels;
+  const peak = measurement?.peak_decibels;
+  const noise = measurement?.noise_level;
+  const distortion =
+    measurement?.distortion_level;
+  const clipping =
+    measurement?.clipping_detected ?? false;
+  const feedback =
+    measurement?.feedback_detected ? 1 : 0;
+
+  const unackAlerts = alerts.filter(
+    (alert) => !alert.acknowledged,
+  );
 
   function getMetricStatus(
     value: number,
     target: number,
     tolerance: number,
-  ): 'good' | 'warning' | 'critical' {
-    if (Math.abs(value - target) <= tolerance) return 'good';
-    if (Math.abs(value - target) <= tolerance * 1.5) return 'warning';
+  ):
+    | 'good'
+    | 'warning'
+    | 'critical' {
+    if (
+      Math.abs(value - target) <=
+      tolerance
+    ) {
+      return 'good';
+    }
+
+    if (
+      Math.abs(value - target) <=
+      tolerance * 1.5
+    ) {
+      return 'warning';
+    }
+
     return 'critical';
   }
 
@@ -120,10 +204,14 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       <PageHeader
         title="Dashboard"
         description="Real-time system overview and measurement status"
-        icon={<LayoutDashboard className="h-5 w-5" />}
+        icon={
+          <LayoutDashboard className="h-5 w-5" />
+        }
         actions={
           <Button
-            onClick={() => onNavigate('measurements')}
+            onClick={() =>
+              onNavigate('measurements')
+            }
             className="gap-2"
           >
             <Activity className="h-4 w-4" />
@@ -134,23 +222,34 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
       <DemoBanner isDemo={isDemo} />
 
-      {/* System Health Bar */}
+      {/* ------------------------------------------------------------------ */}
+      {/* System Health                                                      */}
+      {/* ------------------------------------------------------------------ */}
+
       {health && (
         <Card className="border-border bg-card">
           <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 py-3">
             <div className="flex items-center gap-2">
               <span
                 className={
-                  health.dspEngineOnline ? 'text-success' : 'text-error'
+                  health.dspEngineOnline
+                    ? 'text-success'
+                    : 'text-error'
                 }
               >
                 <Radio className="h-4 w-4" />
               </span>
 
-              <span className="text-sm font-medium">DSP Engine</span>
+              <span className="text-sm font-medium">
+                DSP Engine
+              </span>
 
               <StatusIndicator
-                status={health.dspEngineOnline ? 'active' : 'fault'}
+                status={
+                  health.dspEngineOnline
+                    ? 'active'
+                    : 'fault'
+                }
               />
             </div>
 
@@ -160,7 +259,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             />
 
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Channels:</span>
+              <span className="text-muted-foreground">
+                Channels:
+              </span>
+
               <span className="font-mono-tech font-semibold">
                 {health.activeChannels}
               </span>
@@ -172,9 +274,15 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             />
 
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Sample Rate:</span>
+              <span className="text-muted-foreground">
+                Sample Rate:
+              </span>
+
               <span className="font-mono-tech font-semibold">
-                {(health.sampleRate / 1000).toFixed(0)} kHz
+                {(
+                  health.sampleRate / 1000
+                ).toFixed(0)}{' '}
+                kHz
               </span>
             </div>
 
@@ -184,7 +292,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             />
 
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Latency:</span>
+              <span className="text-muted-foreground">
+                Latency:
+              </span>
+
               <span className="font-mono-tech font-semibold">
                 {health.latencyMs} ms
               </span>
@@ -196,18 +307,26 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             />
 
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Last Sync:</span>
+              <span className="text-muted-foreground">
+                Last Sync:
+              </span>
+
               <span className="font-mono-tech text-xs">
-                {new Date(health.lastSync).toLocaleTimeString()}
+                {new Date(
+                  health.lastSync,
+                ).toLocaleTimeString()}
               </span>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Current Venue & Session */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Venue / Session / Health                                           */}
+      {/* ------------------------------------------------------------------ */}
+
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
+        <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
               Current Venue
@@ -218,7 +337,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             {venue ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold">{venue.name}</h3>
+                  <h3 className="text-lg font-bold">
+                    {venue.name}
+                  </h3>
 
                   <Badge variant="outline">
                     Venue
@@ -237,7 +358,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     {venue.height_meters ?? '--'}m
                   </span>
 
-                  <span>Zones: {zones.length}</span>
+                  <span>
+                    Zones: {zones.length}
+                  </span>
                 </div>
               </div>
             ) : (
@@ -246,7 +369,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-1">
+        <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
               Current Session
@@ -257,8 +380,13 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             {session ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold">{session.name}</h3>
-                  <StatusIndicator status={session.status} />
+                  <h3 className="text-lg font-bold">
+                    {session.name}
+                  </h3>
+
+                  <StatusIndicator
+                    status={session.status}
+                  />
                 </div>
 
                 <p className="text-sm text-muted-foreground">
@@ -266,11 +394,16 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 </p>
 
                 <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
-                  <span>{session.measurementCount} measurements</span>
+                  <span>
+                    {session.measurementCount}{' '}
+                    measurements
+                  </span>
 
                   <span>
                     Started:{' '}
-                    {new Date(session.startedAt).toLocaleDateString()}
+                    {new Date(
+                      session.startedAt,
+                    ).toLocaleDateString()}
                   </span>
                 </div>
               </div>
@@ -280,7 +413,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-1">
+        <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
               System Health
@@ -292,6 +425,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               <div className="rounded-lg border border-border bg-background/40 p-3">
                 <div className="flex items-center gap-2 mb-1">
                   <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+
                   <span className="text-xs text-muted-foreground">
                     Zones
                   </span>
@@ -305,6 +439,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               <div className="rounded-lg border border-border bg-background/40 p-3">
                 <div className="flex items-center gap-2 mb-1">
                   <Activity className="h-3.5 w-3.5 text-info" />
+
                   <span className="text-xs text-muted-foreground">
                     Measurements
                   </span>
@@ -318,6 +453,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               <div className="rounded-lg border border-border bg-background/40 p-3">
                 <div className="flex items-center gap-2 mb-1">
                   <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+
                   <span className="text-xs text-muted-foreground">
                     Alerts
                   </span>
@@ -331,6 +467,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               <div className="rounded-lg border border-border bg-background/40 p-3">
                 <div className="flex items-center gap-2 mb-1">
                   <Gauge className="h-3.5 w-3.5 text-primary" />
+
                   <span className="text-xs text-muted-foreground">
                     Points
                   </span>
@@ -345,7 +482,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         </Card>
       </div>
 
-      {/* Core Metrics Grid */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Core Measurement Metrics                                           */}
+      {/* ------------------------------------------------------------------ */}
+
       <div>
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
           Current Measurement
@@ -354,65 +494,125 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
           <MetricCard
             label="RMS"
-            value={metrics?.rms.toFixed(1) ?? '--'}
+            value={
+              rms !== undefined
+                ? rms.toFixed(1)
+                : '--'
+            }
             unit="dBFS"
             icon={Gauge}
             status={
-              metrics
-                ? getMetricStatus(metrics.rms, -18, 3)
+              rms !== undefined
+                ? getMetricStatus(
+                    rms,
+                    -18,
+                    3,
+                  )
                 : 'neutral'
             }
-            subtext={metrics ? 'Target: -18 dBFS' : 'No data'}
+            subtext={
+              rms !== undefined
+                ? 'Target: -18 dBFS'
+                : 'No data'
+            }
           />
 
           <MetricCard
             label="Peak"
-            value={metrics?.peak.toFixed(1) ?? '--'}
+            value={
+              peak !== undefined
+                ? peak.toFixed(1)
+                : '--'
+            }
             unit="dBFS"
             icon={TrendingUp}
             status={
-              metrics
-                ? getMetricStatus(metrics.peak, -6, 3)
+              peak !== undefined
+                ? getMetricStatus(
+                    peak,
+                    -6,
+                    3,
+                  )
                 : 'neutral'
             }
-            subtext={metrics ? 'Target: -6 dBFS' : 'No data'}
+            subtext={
+              peak !== undefined
+                ? 'Target: -6 dBFS'
+                : 'No data'
+            }
           />
 
           <MetricCard
             label="Noise"
-            value={metrics?.noise.toFixed(1) ?? '--'}
+            value={
+              noise !== undefined
+                ? noise.toFixed(1)
+                : '--'
+            }
             unit="dBFS"
             icon={Radio}
             status={
-              metrics
-                ? getMetricStatus(metrics.noise, -55, 5)
+              noise !== undefined
+                ? getMetricStatus(
+                    noise,
+                    -55,
+                    5,
+                  )
                 : 'neutral'
             }
-            subtext={metrics ? 'Target: -55 dBFS' : 'No data'}
+            subtext={
+              noise !== undefined
+                ? 'Target: -55 dBFS'
+                : 'No data'
+            }
           />
 
           <MetricCard
             label="Distortion"
             value={
-              metrics ? metrics.distortion.toFixed(1) : '--'
+              distortion !== undefined
+                ? distortion.toFixed(1)
+                : '--'
             }
             unit="%"
             icon={Zap}
             status={
-              metrics
-                ? getMetricStatus(metrics.distortion, 1.0, 0.5)
+              distortion !== undefined
+                ? getMetricStatus(
+                    distortion,
+                    1,
+                    0.5,
+                  )
                 : 'neutral'
             }
-            subtext={metrics ? 'Target: <1.0%' : 'No data'}
+            subtext={
+              distortion !== undefined
+                ? 'Target: <1.0%'
+                : 'No data'
+            }
           />
 
           <MetricCard
             label="Clipping"
-            value={metrics?.clipping ? 'YES' : 'NO'}
+            value={
+              measurement
+                ? clipping
+                  ? 'YES'
+                  : 'NO'
+                : '--'
+            }
             icon={AlertTriangle}
-            status={metrics?.clipping ? 'critical' : 'good'}
+            status={
+              !measurement
+                ? 'neutral'
+                : clipping
+                ? 'critical'
+                : 'good'
+            }
             subtext={
-              metrics?.clipping
+              !measurement
+                ? 'No data'
+                : clipping
                 ? 'Signal exceeding headroom'
                 : 'No clipping detected'
             }
@@ -421,31 +621,46 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           <MetricCard
             label="Feedback"
             value={
-              metrics ? metrics.feedback.toFixed(2) : '--'
+              measurement
+                ? feedback.toFixed(2)
+                : '--'
             }
             icon={AudioWaveform}
             status={
-              metrics
-                ? getMetricStatus(metrics.feedback, 0, 0.2)
+              measurement
+                ? getMetricStatus(
+                    feedback,
+                    0,
+                    0.2,
+                  )
                 : 'neutral'
             }
-            subtext={metrics ? 'Target: 0.0' : 'No data'}
+            subtext={
+              measurement
+                ? 'Target: 0.0'
+                : 'No data'
+            }
           />
         </div>
       </div>
 
-      {/* Meters + Visualizations */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Level Meters                                                       */}
+      {/* ------------------------------------------------------------------ */}
+
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Level Meters</CardTitle>
+            <CardTitle className="text-sm">
+              Level Meters
+            </CardTitle>
           </CardHeader>
 
           <CardContent>
             <div className="flex justify-around gap-4">
               <VUMeter
                 label="RMS"
-                value={metrics?.rms ?? -60}
+                value={rms ?? -60}
                 min={-60}
                 max={0}
                 unit="dBFS"
@@ -454,7 +669,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
               <VUMeter
                 label="Peak"
-                value={metrics?.peak ?? -60}
+                value={peak ?? -60}
                 min={-60}
                 max={0}
                 unit="dBFS"
@@ -463,7 +678,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
               <VUMeter
                 label="Noise"
-                value={metrics?.noise ?? -60}
+                value={noise ?? -80}
                 min={-80}
                 max={-20}
                 unit="dBFS"
@@ -473,28 +688,46 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </CardContent>
         </Card>
 
+        {/* ---------------------------------------------------------------- */}
+        {/* Measurement Waveform                                             */}
+        {/* ---------------------------------------------------------------- */}
+
         <Card className="lg:col-span-2">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm">Waveform</CardTitle>
+            <CardTitle className="text-sm">
+              Waveform
+            </CardTitle>
 
             <Badge
               variant="outline"
               className="text-xs font-mono-tech"
             >
               {measurement
-                ? new Date(measurement.timestamp).toLocaleTimeString()
+                ? new Date(
+                    measurement.created_at,
+                  ).toLocaleTimeString()
                 : '--'}
             </Badge>
           </CardHeader>
 
           <CardContent>
             <WaveformDisplay
-              data={measurement?.waveform}
+              data={[]}
               height={180}
             />
+
+            {!measurement && (
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                No measurement waveform available.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Frequency Spectrum                                                 */}
+      {/* ------------------------------------------------------------------ */}
 
       <Card>
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
@@ -505,7 +738,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onNavigate('measurements')}
+            onClick={() =>
+              onNavigate('measurements')
+            }
             className="gap-1 text-xs"
           >
             Open workspace
@@ -515,13 +750,22 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
         <CardContent>
           <SpectrumDisplay
-            data={measurement?.spectrum}
+            data={[]}
+            live={false}
             height={160}
           />
+
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            Frequency-domain data will appear when
+            the measurement contains frequency data.
+          </p>
         </CardContent>
       </Card>
 
-      {/* Alerts + Smart Suggestions */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Alerts + Smart Suggestions                                         */}
+      {/* ------------------------------------------------------------------ */}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
@@ -534,7 +778,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 variant="outline"
                 className="text-warning border-warning/30"
               >
-                {unackAlerts.length} unacknowledged
+                {unackAlerts.length}{' '}
+                unacknowledged
               </Badge>
             )}
           </CardHeader>
@@ -555,7 +800,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                   className="flex items-start gap-3 rounded-lg border border-border bg-background/40 p-3"
                 >
                   <div className="mt-0.5">
-                    <AlertBadge severity={alert.severity} />
+                    <AlertBadge
+                      severity={alert.severity}
+                    />
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -590,7 +837,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onNavigate('engineering')}
+              onClick={() =>
+                onNavigate('engineering')
+              }
               className="gap-1 text-xs"
             >
               View all
@@ -605,39 +854,43 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 description="Measurements are within target parameters."
               />
             ) : (
-              suggestions.slice(0, 3).map((suggestion) => (
-                <div
-                  key={suggestion.id}
-                  className="rounded-lg border border-border bg-background/40 p-3 hover:border-primary/30 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold">
-                      {suggestion.title}
+              suggestions
+                .slice(0, 3)
+                .map((suggestion) => (
+                  <div
+                    key={suggestion.id}
+                    className="rounded-lg border border-border bg-background/40 p-3 hover:border-primary/30 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-semibold">
+                        {suggestion.title}
+                      </p>
+
+                      <Badge
+                        variant="outline"
+                        className={
+                          suggestion.priority ===
+                          'high'
+                            ? 'border-error/30 text-error text-[10px]'
+                            : suggestion.priority ===
+                              'medium'
+                            ? 'border-warning/30 text-warning text-[10px]'
+                            : 'border-info/30 text-info text-[10px]'
+                        }
+                      >
+                        {suggestion.priority}
+                      </Badge>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {suggestion.description}
                     </p>
 
-                    <Badge
-                      variant="outline"
-                      className={
-                        suggestion.priority === 'high'
-                          ? 'border-error/30 text-error text-[10px]'
-                          : suggestion.priority === 'medium'
-                          ? 'border-warning/30 text-warning text-[10px]'
-                          : 'border-info/30 text-info text-[10px]'
-                      }
-                    >
-                      {suggestion.priority}
-                    </Badge>
+                    <p className="text-xs text-primary mt-2 font-medium">
+                      → {suggestion.action}
+                    </p>
                   </div>
-
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {suggestion.description}
-                  </p>
-
-                  <p className="text-xs text-primary mt-2 font-medium">
-                    → {suggestion.action}
-                  </p>
-                </div>
-              ))
+                ))
             )}
           </CardContent>
         </Card>
