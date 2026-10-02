@@ -2,9 +2,9 @@ import { cn } from '@/lib/utils';
 
 interface VUMeterProps {
   value: number;
-  /** Minimum value in dB (e.g. -60) */
+  /** Minimum value in dB */
   min?: number;
-  /** Maximum value in dB (e.g. 0) */
+  /** Maximum value in dB */
   max?: number;
   /** Label for the meter */
   label?: string;
@@ -17,7 +17,8 @@ interface VUMeterProps {
   className?: string;
 }
 
-// Professional vertical VU/level meter with green/amber/red zones
+// Professional segmented vertical level meter.
+// The level moves while the color zones remain fixed.
 export function VUMeter({
   value,
   min = -60,
@@ -29,64 +30,154 @@ export function VUMeter({
   className,
 }: VUMeterProps) {
   const range = max - min;
-  const clamped = Math.max(min, Math.min(max, value));
-  const fillPercent = ((clamped - min) / range) * 100;
 
-  // Zone boundaries: green up to -12dB, amber to -3dB, red above
-  const greenEnd = ((-12 - min) / range) * 100;
-  const amberEnd = ((-3 - min) / range) * 100;
+  const clampedValue = Math.max(min, Math.min(max, value));
+
+  const levelPercent =
+    range > 0 ? ((clampedValue - min) / range) * 100 : 0;
+
+  /*
+   * Fixed signal zones:
+   *
+   * -60 to -36 dBFS = BLUE   → very quiet
+   * -36 to -12 dBFS = GREEN  → normal working signal
+   * -12 to  -3 dBFS = YELLOW → loud signal
+   *  -3 to   0 dBFS = RED    → near digital clipping
+   */
+  const blueEnd = Math.max(
+    0,
+    Math.min(100, ((-36 - min) / range) * 100),
+  );
+
+  const greenEnd = Math.max(
+    0,
+    Math.min(100, ((-12 - min) / range) * 100),
+  );
+
+  const yellowEnd = Math.max(
+    0,
+    Math.min(100, ((-3 - min) / range) * 100),
+  );
+
+  // Number of individual segments in the meter.
+  const segmentCount = 30;
+
+  // How many segments should currently be illuminated?
+  const activeSegments = Math.ceil(
+    (levelPercent / 100) * segmentCount,
+  );
 
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       {label && (
         <div className="flex items-baseline justify-between">
-          <span className="text-xs font-medium text-muted-foreground">{label}</span>
+          <span className="text-xs font-medium text-muted-foreground">
+            {label}
+          </span>
+
           <span className="font-mono-tech text-sm font-semibold text-foreground">
-            {value.toFixed(1)}
-            <span className="text-[10px] text-muted-foreground ml-1">{unit}</span>
+            {Number.isFinite(value) ? value.toFixed(1) : '-∞'}
+
+            <span className="text-[10px] text-muted-foreground ml-1">
+              {unit}
+            </span>
           </span>
         </div>
       )}
+
       <div className="flex gap-2 items-stretch">
         {showScale && (
-          <div className="flex flex-col justify-between text-[9px] text-muted-foreground font-mono-tech pt-0.5">
-            <span>0</span>
+          <div
+            className="
+              flex flex-col justify-between
+              text-[9px]
+              text-muted-foreground
+              font-mono-tech
+              pt-0.5
+            "
+          >
+            <span>{max}</span>
+            <span>-3</span>
             <span>-12</span>
             <span>-24</span>
             <span>-36</span>
             <span>-48</span>
+            <span>{min}</span>
           </div>
         )}
+
         <div
-          className="relative flex-1 rounded-sm bg-background/60 border border-border overflow-hidden"
+          className="
+            relative
+            flex-1
+            rounded-sm
+            bg-background/60
+            border
+            border-border
+            overflow-hidden
+            p-1
+          "
           style={{ height }}
         >
-          {/* Zone backgrounds */}
-          <div className="absolute inset-x-0 top-0 bg-error/10" style={{ height: `${100 - amberEnd}%` }} />
-          <div className="absolute inset-x-0 bg-warning/10" style={{ top: `${amberEnd}%`, height: `${greenEnd - amberEnd}%` }} />
-          <div className="absolute inset-x-0 bottom-0 bg-success/5" style={{ height: `${greenEnd}%` }} />
+          <div className="h-full flex flex-col-reverse gap-[2px]">
+            {Array.from({ length: segmentCount }).map((_, index) => {
+              const segmentPercent =
+                ((index + 1) / segmentCount) * 100;
 
-          {/* Fill bar — comes from the bottom */}
-          <div
-            className="absolute inset-x-0 bottom-0 transition-all duration-200 ease-out"
-            style={{ height: `${fillPercent}%` }}
-          >
-            <div className="absolute inset-x-0 bottom-0 h-full" style={{
-              background: `linear-gradient(to top,
-                hsl(142 69% 45%) 0%,
-                hsl(142 69% 45%) ${greenEnd}%,
-                hsl(38 92% 50%) ${greenEnd}%,
-                hsl(38 92% 50%) ${amberEnd}%,
-                hsl(0 72% 51%) ${amberEnd}%,
-                hsl(0 72% 51%) 100%)`,
-            }} />
-          </div>
+              const isActive = index < activeSegments;
 
-          {/* Tick marks */}
-          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-px bg-border/50 w-full" />
-            ))}
+              let segmentClass = 'bg-muted/30';
+
+              /*
+               * RED
+               * -3 dBFS to 0 dBFS
+               */
+              if (segmentPercent > yellowEnd) {
+                segmentClass = isActive
+                  ? 'bg-error'
+                  : 'bg-error/15';
+              }
+
+              /*
+               * YELLOW
+               * -12 dBFS to -3 dBFS
+               */
+              else if (segmentPercent > greenEnd) {
+                segmentClass = isActive
+                  ? 'bg-warning'
+                  : 'bg-warning/15';
+              }
+
+              /*
+               * GREEN
+               * -36 dBFS to -12 dBFS
+               */
+              else if (segmentPercent > blueEnd) {
+                segmentClass = isActive
+                  ? 'bg-success'
+                  : 'bg-success/15';
+              }
+
+              /*
+               * BLUE
+               * -60 dBFS to -36 dBFS
+               */
+              else {
+                segmentClass = isActive
+                  ? 'bg-blue-500'
+                  : 'bg-blue-500/15';
+              }
+
+              return (
+                <div
+                  key={index}
+                  className={cn(
+                    'flex-1 rounded-[1px] transition-opacity duration-75',
+                    segmentClass,
+                  )}
+                />
+              );
+            })}
           </div>
         </div>
       </div>

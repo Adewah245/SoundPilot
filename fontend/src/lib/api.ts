@@ -1,6 +1,6 @@
 // SoundPilot API Service Layer
-// Client for the existing Go API. Uses VITE_API_BASE_URL for configuration.
-// When the API is not reachable, falls back to clearly-labeled demo/mock data.
+// Client for the existing Go API.
+// Uses VITE_API_BASE_URL for configuration.
 
 import type {
   Alert,
@@ -15,9 +15,10 @@ import type {
   SmartSuggestion,
   SystemHealth,
   Venue,
-  Zone,
   Verification,
+  Zone,
 } from '@/types';
+
 import * as mock from './mock-data';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -30,33 +31,43 @@ export interface ApiResponse<T> {
 
 async function fetchApi<T>(
   path: string,
-  options?: RequestInit
+  options?: RequestInit,
 ): Promise<T | null> {
   if (!API_BASE_URL) return null;
+
   try {
-    const res = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
       headers: {
         'Content-Type': 'application/json',
         ...options?.headers,
       },
       ...options,
     });
-    if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
-    return (await res.json()) as T;
+
+    if (!response.ok) {
+      throw new Error(`API ${response.status}: ${response.statusText}`);
+    }
+
+    return (await response.json()) as T;
   } catch {
     return null;
   }
 }
 
 function withDemo<T>(data: T): ApiResponse<T> {
-  return { data, isDemo: true };
+  return {
+    data,
+    isDemo: true,
+  };
 }
 
 function withLive<T>(data: T): ApiResponse<T> {
-  return { data, isDemo: false };
+  return {
+    data,
+    isDemo: false,
+  };
 }
 
-// Simulate async for realistic loading states
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -67,27 +78,46 @@ function delay(ms: number): Promise<void> {
 
 export async function getVenues(): Promise<ApiResponse<Venue[]>> {
   const live = await fetchApi<Venue[]>('/venues');
+
   if (live) return withLive(live);
+
   await delay(300);
+
   return withDemo(mock.mockVenues);
 }
 
-export async function getVenue(id: string): Promise<ApiResponse<Venue | null>> {
+export async function getVenue(
+  id: string,
+): Promise<ApiResponse<Venue | null>> {
   const live = await fetchApi<Venue>(`/venues/${id}`);
+
   if (live) return withLive(live);
+
   await delay(200);
-  return withDemo(mock.mockVenues.find((v) => v.id === id) ?? null);
+
+  return withDemo(
+    mock.mockVenues.find((venue) => venue.id === id) ?? null,
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Zones
 // ---------------------------------------------------------------------------
 
-export async function getZones(venueId: string): Promise<ApiResponse<Zone[]>> {
-  const live = await fetchApi<Zone[]>(`/venues/${venueId}/zones`);
+export async function getZones(
+  venueId: string,
+): Promise<ApiResponse<Zone[]>> {
+  const live = await fetchApi<Zone[]>(
+    `/zones?venue_id=${encodeURIComponent(venueId)}`,
+  );
+
   if (live) return withLive(live);
+
   await delay(200);
-  return withDemo(mock.mockZones.filter((z) => z.venueId === venueId));
+
+  return withDemo(
+    mock.mockZones.filter((zone) => zone.venue_id === venueId),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -95,25 +125,34 @@ export async function getZones(venueId: string): Promise<ApiResponse<Zone[]>> {
 // ---------------------------------------------------------------------------
 
 export async function getMeasurementPoints(
-  zoneId: string
+  zoneId: string,
 ): Promise<ApiResponse<MeasurementPoint[]>> {
-  const live = await fetchApi<MeasurementPoint[]>(`/zones/${zoneId}/points`);
+  const live = await fetchApi<MeasurementPoint[]>(
+    `/measurement-points?zone_id=${encodeURIComponent(zoneId)}`,
+  );
+
   if (live) return withLive(live);
+
   await delay(200);
-  return withDemo(mock.mockMeasurementPoints.filter((mp) => mp.zoneId === zoneId));
+
+  return withDemo(
+    mock.mockMeasurementPoints.filter(
+      (point) => point.zone_id === zoneId,
+    ),
+  );
 }
 
 export async function getAllMeasurementPoints(
-  venueId: string
+  venueId: string,
 ): Promise<ApiResponse<MeasurementPoint[]>> {
-  const live = await fetchApi<MeasurementPoint[]>(`/venues/${venueId}/points`);
-  if (live) return withLive(live);
-  await delay(300);
-  const zoneIds = mock.mockZones
-    .filter((z) => z.venueId === venueId)
-    .map((z) => z.id);
+  const zones = await getZones(venueId);
+
+  const results = await Promise.all(
+    zones.data.map((zone) => getMeasurementPoints(zone.id)),
+  );
+
   return withDemo(
-    mock.mockMeasurementPoints.filter((mp) => zoneIds.includes(mp.zoneId))
+    results.flatMap((result) => result.data),
   );
 }
 
@@ -122,41 +161,81 @@ export async function getAllMeasurementPoints(
 // ---------------------------------------------------------------------------
 
 export async function getMeasurements(
-  sessionId: string
+  sessionId: string,
 ): Promise<ApiResponse<Measurement[]>> {
-  const live = await fetchApi<Measurement[]>(`/sessions/${sessionId}/measurements`);
+  const live = await fetchApi<Measurement[]>(
+    `/sessions/${sessionId}/measurements`,
+  );
+
   if (live) return withLive(live);
+
   await delay(300);
-  return withDemo(mock.mockMeasurements.filter((m) => m.sessionId === sessionId));
+
+  return withDemo(
+    mock.mockMeasurements.filter(
+      (measurement) => measurement.sessionId === sessionId,
+    ),
+  );
 }
 
-export async function getLatestMeasurement(): Promise<ApiResponse<Measurement | null>> {
-  const live = await fetchApi<Measurement>('/measurements/latest');
+export async function getLatestMeasurement(): Promise<
+  ApiResponse<Measurement | null>
+> {
+  const live = await fetchApi<Measurement>(
+    '/measurements/latest',
+  );
+
   if (live) return withLive(live);
+
   await delay(200);
+
   return withDemo(mock.latestMeasurement);
 }
 
 // ---------------------------------------------------------------------------
-// Equipment & Signal Chain
+// Equipment
 // ---------------------------------------------------------------------------
 
 export async function getEquipment(
-  venueId: string
+  venueId: string,
 ): Promise<ApiResponse<Equipment[]>> {
-  const live = await fetchApi<Equipment[]>(`/venues/${venueId}/equipment`);
+  const live = await fetchApi<Equipment[]>(
+    `/equipment?venue_id=${encodeURIComponent(venueId)}`,
+  );
+
   if (live) return withLive(live);
+
   await delay(300);
-  return withDemo(mock.mockEquipment.filter((e) => e.venueId === venueId));
+
+  return withDemo(
+    mock.mockEquipment.filter(
+      (equipment) => equipment.venueId === venueId,
+    ),
+  );
 }
 
+// ---------------------------------------------------------------------------
+// Signal Chain
+// ---------------------------------------------------------------------------
+
 export async function getSignalChain(
-  venueId: string
+  venueId: string,
 ): Promise<ApiResponse<SignalChain | null>> {
-  const live = await fetchApi<SignalChain>(`/venues/${venueId}/signal-chain`);
-  if (live) return withLive(live);
+  const live = await fetchApi<SignalChain[]>(
+    `/signal-chains?venue_id=${encodeURIComponent(venueId)}`,
+  );
+
+  if (live) {
+    return withLive(live[0] ?? null);
+  }
+
   await delay(200);
-  return withDemo(mock.mockSignalChain.find((sc) => sc.venueId === venueId) ?? null);
+
+  return withDemo(
+    mock.mockSignalChain.find(
+      (signalChain) => signalChain.venueId === venueId,
+    ) ?? null,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -164,16 +243,24 @@ export async function getSignalChain(
 // ---------------------------------------------------------------------------
 
 export async function getSessions(
-  venueId?: string
+  venueId?: string,
 ): Promise<ApiResponse<Session[]>> {
-  const path = venueId ? `/venues/${venueId}/sessions` : '/sessions';
+  const path = venueId
+    ? `/sessions?venue_id=${encodeURIComponent(venueId)}`
+    : '/sessions';
+
   const live = await fetchApi<Session[]>(path);
+
   if (live) return withLive(live);
+
   await delay(300);
+
   return withDemo(
     venueId
-      ? mock.mockSessions.filter((s) => s.venueId === venueId)
-      : mock.mockSessions
+      ? mock.mockSessions.filter(
+          (session) => session.venueId === venueId,
+        )
+      : mock.mockSessions,
   );
 }
 
@@ -182,56 +269,108 @@ export async function getSessions(
 // ---------------------------------------------------------------------------
 
 export async function getEngineeringProfiles(
-  venueId: string
+  venueId: string,
 ): Promise<ApiResponse<EngineeringProfile[]>> {
-  const live = await fetchApi<EngineeringProfile[]>(`/venues/${venueId}/profiles`);
+  const live = await fetchApi<EngineeringProfile[]>(
+    `/engineering/profiles?venue_id=${encodeURIComponent(venueId)}`,
+  );
+
   if (live) return withLive(live);
+
   await delay(200);
-  return withDemo(mock.mockEngineeringProfiles.filter((p) => p.venueId === venueId));
+
+  return withDemo(
+    mock.mockEngineeringProfiles.filter(
+      (profile) => profile.venueId === venueId,
+    ),
+  );
 }
 
 export async function getEngineeringResults(
-  sessionId: string
+  sessionId: string,
 ): Promise<ApiResponse<EngineeringResult[]>> {
-  const live = await fetchApi<EngineeringResult[]>(`/sessions/${sessionId}/engineering`);
+  const live = await fetchApi<EngineeringResult[]>(
+    `/engineering/results/${sessionId}`,
+  );
+
   if (live) return withLive(live);
+
   await delay(300);
-  return withDemo(mock.mockEngineeringResults.filter((r) => r.sessionId === sessionId));
+
+  return withDemo(
+    mock.mockEngineeringResults.filter(
+      (result) => result.sessionId === sessionId,
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Baselines & Verifications
+// Baselines
 // ---------------------------------------------------------------------------
 
 export async function getBaselines(
-  venueId: string
+  venueId: string,
 ): Promise<ApiResponse<Baseline[]>> {
-  const live = await fetchApi<Baseline[]>(`/venues/${venueId}/baselines`);
+  const live = await fetchApi<Baseline[]>(
+    `/baselines?venue_id=${encodeURIComponent(venueId)}`,
+  );
+
   if (live) return withLive(live);
+
   await delay(200);
-  return withDemo(mock.mockBaselines.filter((b) => b.venueId === venueId));
+
+  return withDemo(
+    mock.mockBaselines.filter(
+      (baseline) => baseline.venueId === venueId,
+    ),
+  );
 }
 
+// ---------------------------------------------------------------------------
+// Verifications
+// ---------------------------------------------------------------------------
+
 export async function getVerifications(
-  sessionId: string
+  sessionId: string,
 ): Promise<ApiResponse<Verification[]>> {
-  const live = await fetchApi<Verification[]>(`/sessions/${sessionId}/verifications`);
+  const live = await fetchApi<Verification[]>(
+    `/verification?session_id=${encodeURIComponent(sessionId)}`,
+  );
+
   if (live) return withLive(live);
+
   await delay(300);
-  return withDemo(mock.mockVerifications.filter((v) => v.sessionId === sessionId));
+
+  return withDemo(
+    mock.mockVerifications.filter(
+      (verification) => verification.sessionId === sessionId,
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Alerts
 // ---------------------------------------------------------------------------
 
-export async function getAlerts(venueId?: string): Promise<ApiResponse<Alert[]>> {
-  const path = venueId ? `/venues/${venueId}/alerts` : '/alerts';
+export async function getAlerts(
+  venueId?: string,
+): Promise<ApiResponse<Alert[]>> {
+  const path = venueId
+    ? `/alerts?venue_id=${encodeURIComponent(venueId)}`
+    : '/alerts';
+
   const live = await fetchApi<Alert[]>(path);
+
   if (live) return withLive(live);
+
   await delay(200);
+
   return withDemo(
-    venueId ? mock.mockAlerts.filter((a) => a.venueId === venueId) : mock.mockAlerts
+    venueId
+      ? mock.mockAlerts.filter(
+          (alert) => alert.venueId === venueId,
+        )
+      : mock.mockAlerts,
   );
 }
 
@@ -239,10 +378,17 @@ export async function getAlerts(venueId?: string): Promise<ApiResponse<Alert[]>>
 // Smart Suggestions
 // ---------------------------------------------------------------------------
 
-export async function getSmartSuggestions(): Promise<ApiResponse<SmartSuggestion[]>> {
-  const live = await fetchApi<SmartSuggestion[]>('/suggestions');
+export async function getSmartSuggestions(): Promise<
+  ApiResponse<SmartSuggestion[]>
+> {
+  const live = await fetchApi<SmartSuggestion[]>(
+    '/suggestions',
+  );
+
   if (live) return withLive(live);
+
   await delay(300);
+
   return withDemo(mock.mockSmartSuggestions);
 }
 
@@ -250,15 +396,20 @@ export async function getSmartSuggestions(): Promise<ApiResponse<SmartSuggestion
 // System Health
 // ---------------------------------------------------------------------------
 
-export async function getSystemHealth(): Promise<ApiResponse<SystemHealth>> {
+export async function getSystemHealth(): Promise<
+  ApiResponse<SystemHealth>
+> {
   const live = await fetchApi<SystemHealth>('/health');
+
   if (live) return withLive(live);
+
   await delay(200);
+
   return withDemo(mock.mockSystemHealth);
 }
 
 // ---------------------------------------------------------------------------
-// API configuration info
+// API Configuration
 // ---------------------------------------------------------------------------
 
 export function getApiConfig() {

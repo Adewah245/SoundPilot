@@ -7,42 +7,39 @@
 // Venue → Zone → Measurement Point hierarchy
 // ---------------------------------------------------------------------------
 
-export type VenueType =
-  | 'church'
-  | 'auditorium'
-  | 'event_centre'
-  | 'concert_hall'
-  | 'studio'
-  | 'other';
+// ---------------------------------------------------------------------------
+// Venue → Zone → Measurement Point hierarchy
+// ---------------------------------------------------------------------------
 
 export interface Venue {
   id: string;
   name: string;
-  type: VenueType;
-  address: string;
-  capacity: number;
-  description: string;
-  createdAt: string;
-  updatedAt: string;
+  description?: string;
+  width_meters?: number;
+  length_meters?: number;
+  height_meters?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Zone {
   id: string;
-  venueId: string;
+  venue_id: string;
   name: string;
-  description: string;
-  order: number;
-  measurementPointIds: string[];
+  type: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MeasurementPoint {
   id: string;
-  zoneId: string;
+  zone_id: string;
   name: string;
-  location: string;
-  microphoneId: string | null;
-  lastMeasurementId: string | null;
-  status: MeasurementPointStatus;
+  position_x?: number;
+  position_y?: number;
+  position_z?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export type MeasurementPointStatus =
