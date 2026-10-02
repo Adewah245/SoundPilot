@@ -157,7 +157,7 @@ export function AIAssistantPage({ onNavigate }: AIAssistantProps) {
         icon={<Bot className="h-5 w-5" />}
       />
 
-      <DemoBanner isDemo isMessage={false} message="The assistant uses pre-built guidance patterns. Connect the Go API for AI-powered analysis of live measurement data." />
+      <DemoBanner isDemo message="The assistant uses pre-built guidance patterns. Connect the Go API for AI-powered analysis of live measurement data." />
 
       {/* Workflow guide */}
       <Card className="border-primary/20 bg-primary/5">

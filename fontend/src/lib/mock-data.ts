@@ -15,6 +15,7 @@ import type {
   SmartSuggestion,
   SystemHealth,
   Venue,
+  Verification,
   Zone,
 } from '@/types';
 
