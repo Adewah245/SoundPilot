@@ -3,7 +3,7 @@
 // Demo data for frontend development. When the Go API is available,
 // the app will switch to live data. Clearly labeled as demo.
 // =========================================================================
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080").replace(/\/$/, "");
+export const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080").replace(/\/$/, "");
 
 export const VENUES = [
   {
@@ -168,7 +168,6 @@ export function generateSpectrum(bins = 28) {
   return out;
 }
 
-// --- API simulation (async with delay) ---
 async function requestJSON(path, options = {}) {
   const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
   const response = await fetch(url, {
@@ -177,10 +176,37 @@ async function requestJSON(path, options = {}) {
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    const message = await response.text();
+    throw new Error(message || `Request failed: ${response.status} ${response.statusText}`);
   }
 
   return response.json();
+}
+
+export function listVenues() {
+  return requestJSON('/venues');
+}
+
+export function getVenue(venueId) {
+  return requestJSON(`/venues/${encodeURIComponent(venueId)}`);
+}
+
+export function createVenue(payload) {
+  return requestJSON('/venues', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listVenueDimensionMeasurements(venueId) {
+  return requestJSON(`/venues/${encodeURIComponent(venueId)}/dimensions`);
+}
+
+export function saveVenueDimensionMeasurements(venueId, measurements) {
+  return requestJSON(`/venues/${encodeURIComponent(venueId)}/dimensions`, {
+    method: 'POST',
+    body: JSON.stringify({ measurements }),
+  });
 }
 
 function withFallback(value, fallback) {

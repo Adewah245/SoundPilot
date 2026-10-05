@@ -6,6 +6,9 @@ import "time"
 type Venue struct {
 	ID              string    `json:"id"`
 	Name            string    `json:"name"`
+	Type            string    `json:"type"`
+	Address         string    `json:"address"`
+	MeasurementUnit string    `json:"measurement_unit"`
 	Description     string    `json:"description,omitempty"`
 	WidthMeters     float64   `json:"width_meters,omitempty"`
 	LengthMeters    float64   `json:"length_meters,omitempty"`
@@ -15,6 +18,16 @@ type Venue struct {
 	Channels        int       `json:"channels"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// FloorArea returns the floor area of the venue in square meters.
+func (v Venue) FloorArea() float64 {
+	return v.LengthMeters * v.WidthMeters
+}
+
+// RoomVolume returns the interior volume of the venue in cubic meters.
+func (v Venue) RoomVolume() float64 {
+	return v.LengthMeters * v.WidthMeters * v.HeightMeters
 }
 
 // Zone represents a logical area inside a venue.
@@ -28,6 +41,21 @@ type Zone struct {
 	Channels        int       `json:"channels"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// VenueDimensionMeasurement stores one measured room dimension.
+type VenueDimensionMeasurement struct {
+	ID                 string    `json:"id"`
+	VenueID            string    `json:"venue_id"`
+	MeasurementGroupID string    `json:"measurement_group_id"`
+	Dimension          string    `json:"dimension"`
+	ValueMeters        float64   `json:"value_meters"`
+	Method             string    `json:"method"`
+	Source             string    `json:"source"`
+	Confidence         string    `json:"confidence"`
+	DeviceInfo         string    `json:"device_info,omitempty"`
+	MeasuredAt         time.Time `json:"measured_at"`
+	Notes              string    `json:"notes,omitempty"`
 }
 
 // MeasurementPoint represents a specific location where measurements are taken.

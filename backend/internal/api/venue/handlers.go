@@ -2,6 +2,8 @@ package venue
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
 	"net/http"
 	"strings"
 
@@ -49,6 +51,12 @@ func (h *Handler) GetVenueHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	path := strings.Trim(strings.TrimPrefix(r.URL.Path, "/venues/"), "/")
+	parts := strings.Split(path, "/")
+	if len(parts) == 2 && parts[1] == "dimensions" {
+		h.dimensionMeasurementsHandler(w, r, parts[0])
+		return
+	}
 	if r.Method != http.MethodGet {
 		http.Error(
 			w,
@@ -58,10 +66,7 @@ func (h *Handler) GetVenueHandler(
 		return
 	}
 
-	venueID := strings.TrimPrefix(
-		r.URL.Path,
-		"/venues/",
-	)
+	venueID := path
 
 	if venueID == "" {
 		http.Error(
@@ -120,11 +125,11 @@ func (h *Handler) createVenue(
 	r *http.Request,
 ) {
 	var input struct {
-		Name         string  `json:"name"`
-		Description  string  `json:"description"`
-		WidthMeters  float64 `json:"width_meters"`
-		LengthMeters float64 `json:"length_meters"`
-		HeightMeters float64 `json:"height_meters"`
+		Type            string `json:"type"`
+		Address         string `json:"address"`
+		MeasurementUnit string `json:"measurement_unit"`
+		Name            string `json:"name"`
+		Description     string `json:"description"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -136,7 +141,11 @@ func (h *Handler) createVenue(
 		return
 	}
 
-	if strings.TrimSpace(input.Name) == "" {
+	input.Name = strings.TrimSpace(input.Name)
+	input.Type = strings.TrimSpace(input.Type)
+	input.Address = strings.TrimSpace(input.Address)
+	input.MeasurementUnit = strings.TrimSpace(input.MeasurementUnit)
+	if input.Name == "" {
 		http.Error(
 			w,
 			"venue name is required",
@@ -144,14 +153,29 @@ func (h *Handler) createVenue(
 		)
 		return
 	}
+	if input.Type == "" {
+		http.Error(w, "venue type is required", http.StatusBadRequest)
+		return
+	}
+	if input.Address == "" {
+		http.Error(w, "venue address is required", http.StatusBadRequest)
+		return
+	}
+	if input.MeasurementUnit == "" {
+		input.MeasurementUnit = "m"
+	}
+	if input.MeasurementUnit != "m" && input.MeasurementUnit != "ft" {
+		http.Error(w, "measurement_unit must be m or ft", http.StatusBadRequest)
+		return
+	}
 
 	venue := domain.Venue{
-		ID:           domain.NewID(),
-		Name:         strings.TrimSpace(input.Name),
-		Description:  strings.TrimSpace(input.Description),
-		WidthMeters:  input.WidthMeters,
-		LengthMeters: input.LengthMeters,
-		HeightMeters: input.HeightMeters,
+		ID:              domain.NewID(),
+		Name:            input.Name,
+		Type:            input.Type,
+		Address:         input.Address,
+		MeasurementUnit: input.MeasurementUnit,
+		Description:     strings.TrimSpace(input.Description),
 	}
 
 	if err := h.repository.CreateVenue(
@@ -171,6 +195,109 @@ func (h *Handler) createVenue(
 		http.StatusCreated,
 		venue,
 	)
+}
+
+func (h *Handler) dimensionMeasurementsHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	venueID string,
+) {
+	if venueID == "" {
+		http.Error(w, "venue ID is required", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		measurements, err := h.repository.ListDimensionMeasurements(r.Context(), venueID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusOK, measurements)
+	case http.MethodPost:
+		var input struct {
+			Measurements []struct {
+				Dimension   string  `json:"dimension"`
+				ValueMeters float64 `json:"value_meters"`
+				Method      string  `json:"method"`
+				Source      string  `json:"source"`
+				Confidence  string  `json:"confidence"`
+				DeviceInfo  string  `json:"device_info"`
+				Notes       string  `json:"notes"`
+			} `json:"measurements"`
+		}
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil {
+			http.Error(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if len(input.Measurements) == 0 {
+			http.Error(w, "at least one measurement is required", http.StatusBadRequest)
+			return
+		}
+
+		groupID := domain.NewID()
+		measurements := make([]domain.VenueDimensionMeasurement, 0, len(input.Measurements))
+		seen := make(map[string]bool, len(input.Measurements))
+		for _, item := range input.Measurements {
+			item.Dimension = strings.ToLower(strings.TrimSpace(item.Dimension))
+			item.Method = strings.ToLower(strings.TrimSpace(item.Method))
+			item.Confidence = strings.ToLower(strings.TrimSpace(item.Confidence))
+			item.Source = strings.TrimSpace(item.Source)
+			if item.Dimension != "length" && item.Dimension != "width" && item.Dimension != "height" {
+				http.Error(w, fmt.Sprintf("unsupported dimension %q", item.Dimension), http.StatusBadRequest)
+				return
+			}
+			if seen[item.Dimension] {
+				http.Error(w, "dimension may only appear once per save", http.StatusBadRequest)
+				return
+			}
+			seen[item.Dimension] = true
+			if item.ValueMeters <= 0 || math.IsNaN(item.ValueMeters) || math.IsInf(item.ValueMeters, 0) {
+				http.Error(w, item.Dimension+" must be a positive finite number of metres", http.StatusBadRequest)
+				return
+			}
+			switch item.Method {
+			case "ar_walk", "ar_point", "manual", "laser":
+			default:
+				http.Error(w, "method must be ar_walk, ar_point, manual, or laser", http.StatusBadRequest)
+				return
+			}
+			switch item.Confidence {
+			case "excellent", "good", "needs_verification":
+			default:
+				http.Error(w, "confidence must be excellent, good, or needs_verification", http.StatusBadRequest)
+				return
+			}
+			if item.Source == "" {
+				http.Error(w, "source is required", http.StatusBadRequest)
+				return
+			}
+			measurements = append(measurements, domain.VenueDimensionMeasurement{
+				ID:                 domain.NewID(),
+				VenueID:            venueID,
+				MeasurementGroupID: groupID,
+				Dimension:          item.Dimension,
+				ValueMeters:        item.ValueMeters,
+				Method:             item.Method,
+				Source:             item.Source,
+				Confidence:         item.Confidence,
+				DeviceInfo:         strings.TrimSpace(item.DeviceInfo),
+				Notes:              strings.TrimSpace(item.Notes),
+			})
+		}
+
+		saved, err := h.repository.SaveDimensionMeasurements(r.Context(), measurements)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, http.StatusCreated, saved)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 // writeJSON writes a JSON API response.

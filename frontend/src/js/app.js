@@ -8,6 +8,7 @@ import { fetchData, ALERTS } from './data.js';
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', desc: 'System overview' },
   { id: 'venue', label: 'Venue', icon: 'venue', desc: 'Zones & measurement points' },
+  { id: 'physical-measurement', label: 'Physical Measurement', icon: 'target', desc: 'Dimensions, area & volume' },
   { id: 'measurements', label: 'Measurements', icon: 'measurements', desc: 'Live measurement workspace' },
   { id: 'engineering', label: 'Engineering', icon: 'engineering', desc: 'Analysis & smart suggestions' },
   { id: 'verification', label: 'Verification', icon: 'verification', desc: 'Before / after comparison' },

@@ -3,15 +3,22 @@
 // =========================================================================
 
 import * as C from '../components.js';
-import { fetchData } from '../data.js';
+import { createVenue, fetchData, listVenues } from '../data.js';
 
-let selectedVenueId = 'v-001';
+let selectedVenueId = '';
 
 export async function render(container) {
   container.innerHTML = C.loading('Loading venues...');
 
-  const venues = await fetchData('venues');
-  await renderVenueData(container, venues, selectedVenueId);
+  try {
+    const venues = await listVenues();
+    selectedVenueId = window.SP.selectedVenueId || selectedVenueId || venues[0]?.id || '';
+    window.SP.selectedVenueId = selectedVenueId;
+    await renderVenueData(container, venues, selectedVenueId);
+  } catch (error) {
+    console.error('Failed to load venues:', error);
+    container.innerHTML = `<div class="card card-content-pt"><p class="text-error">Could not load venues: ${error.message}</p></div>`;
+  }
 }
 
 async function renderVenueData(container, venues, venueId) {
@@ -24,37 +31,80 @@ async function renderVenueData(container, venues, venueId) {
   container.innerHTML = `
     ${C.pageHeader('Venue', 'Venue structure: zones and measurement points', C.icon('venue', 20))}
 
-    ${C.demoBanner(true)}
-
-    <div class="grid grid-2" style="grid-template-columns:1fr">
-    <style>@media(min-width:1024px){.venue-grid{display:grid;grid-template-columns:1fr 2fr;gap:16px}}</style>
-    <div class="venue-grid" style="gap:16px">
-      <!-- Venue list -->
-      <div class="card">
-        <div class="card-header"><span class="card-title flex items-center gap-2">${C.icon('map', 16)} Venues</span></div>
-        <div class="card-content space-y-2">
-          ${venues.map((v) => {
-            const active = v.id === selectedVenueId;
-            return `<button onclick="SP.venue.select('${v.id}')" style="width:100%;text-align:left;border:1px solid ${active ? 'rgba(34,197,94,0.3)' : 'var(--border)'};border-radius:6px;padding:12px;background:${active ? 'rgba(34,197,94,0.05)' : 'var(--bg-elevated)'};transition:all 0.2s;cursor:pointer">
-              <div class="flex items-center justify-between"><span class="text-sm font-semibold">${v.name}</span>${active ? C.icon('arrowRight', 16) : ''}</div>
-              <div class="flex items-center gap-3 mt-1 text-xs text-muted"><span class="flex items-center gap-1">${C.icon('users', 12)} ${v.capacity.toLocaleString()}</span><span style="text-transform:capitalize">${v.type.replace('_', ' ')}</span></div>
-            </button>`;
-          }).join('')}
+  <div class="card mb-4">
+    <div class="card-header"><span class="card-title flex items-center gap-2">${C.icon('plus', 16)} Register New Venue</span></div>
+    <div class="card-content">
+      <form onsubmit="event.preventDefault(); SP.venue.create(this);" class="grid grid-2" style="gap:12px">
+        <label class="field">
+          <span>Venue Name</span>
+          <input name="name" type="text" placeholder="Venue name" required />
+        </label>
+        <label class="field">
+          <span>Venue Type</span>
+          <select name="type">
+            <option value="Church">Church</option>
+            <option value="Auditorium">Auditorium</option>
+            <option value="Event Centre">Event Centre</option>
+            <option value="Conference Hall">Conference Hall</option>
+            <option value="School Hall">School Hall</option>
+            <option value="Theatre">Theatre</option>
+            <option value="Outdoor">Outdoor</option>
+            <option value="Other">Other</option>
+          </select>
+        </label>
+        <label class="field" style="grid-column: 1 / -1;">
+          <span>Location / Address</span>
+          <input name="address" type="text" placeholder="Location / address" required />
+        </label>
+        <label class="field">
+          <span>Measurement Unit</span>
+          <select name="measurement_unit">
+            <option value="m">Metres (m)</option>
+          </select>
+        </label>
+        <label class="field" style="grid-column: 1 / -1;">
+          <span>Description</span>
+          <textarea name="description" rows="3" placeholder="Primary worship auditorium with full-range PA..."></textarea>
+        </label>
+        <div style="grid-column: 1 / -1; display:flex; justify-content:flex-start;">
+          <button type="submit" class="btn btn-primary">Create Venue & Start Survey</button>
         </div>
-      </div>
+      </form>
+    </div>
+  </div>
 
-      <!-- Venue detail + zones -->
-      <div class="space-y">
+  <div class="grid grid-2" style="grid-template-columns:1fr">
+  <style>@media(min-width:1024px){.venue-grid{display:grid;grid-template-columns:1fr 2fr;gap:16px}}</style>
+  <div class="venue-grid" style="gap:16px">
+    <!-- Venue list -->
+    <div class="card">
+      <div class="card-header"><span class="card-title flex items-center gap-2">${C.icon('map', 16)} Venues</span></div>
+      <div class="card-content space-y-2">
+        ${venues.map((v) => {
+          const active = v.id === selectedVenueId;
+          const venueType = v.type || 'venue';
+          return `<button onclick="SP.venue.select('${v.id}')" style="width:100%;text-align:left;border:1px solid ${active ? 'rgba(34,197,94,0.3)' : 'var(--border)'};border-radius:6px;padding:12px;background:${active ? 'rgba(34,197,94,0.05)' : 'var(--bg-elevated)'};transition:all 0.2s;cursor:pointer">
+            <div class="flex items-center justify-between"><span class="text-sm font-semibold">${v.name}</span>${active ? C.icon('arrowRight', 16) : ''}</div>
+            <div class="flex items-center gap-3 mt-1 text-xs text-muted"><span class="flex items-center gap-1">${C.icon('users', 12)} ${v.capacity?.toLocaleString ? v.capacity.toLocaleString() : '—'}</span><span style="text-transform:capitalize">${venueType}</span></div>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- Venue detail + zones -->
+    <div class="space-y">
         <div class="card">
           <div class="card-header">
-            <div class="flex items-center justify-between"><span class="card-title text-lg">${venue?.name || 'Unknown'}</span><span class="badge badge-outline" style="text-transform:capitalize">${venue?.type.replace('_', ' ')}</span></div>
+            <div class="flex items-center justify-between"><span class="card-title text-lg">${venue?.name || 'Select a venue'}</span><span class="badge badge-outline" style="text-transform:capitalize">${venue?.venue_type || venue?.type || 'venue'}</span></div>
           </div>
           <div class="card-content">
-            <p class="text-sm text-muted">${venue?.description}</p>
+            <p class="text-sm text-muted">${venue?.description || 'No description available.'}</p>
             <hr class="separator"/>
             <div class="flex flex-wrap gap-4 text-sm">
-              <div class="flex items-center gap-2">${C.icon('map', 14)}<span class="text-muted">Address:</span><span>${venue?.address}</span></div>
-              <div class="flex items-center gap-2">${C.icon('users', 14)}<span class="text-muted">Capacity:</span><span>${venue?.capacity.toLocaleString()}</span></div>
+              <div class="flex items-center gap-2">${C.icon('map', 14)}<span class="text-muted">Address:</span><span>${venue?.address || 'Not set'}</span></div>
+              <div class="flex items-center gap-2"><span class="text-muted">Unit:</span><span>${venue?.measurement_unit || 'm'}</span></div>
+              <div class="flex items-center gap-2"><span class="text-muted">Dimensions:</span><span>${venue?.length_meters || '—'} × ${venue?.width_meters || '—'} × ${venue?.height_meters || '—'} ${venue?.measurement_unit || 'm'}</span></div>
+              <div class="flex items-center gap-2">${C.icon('users', 14)}<span class="text-muted">Capacity:</span><span>${venue?.capacity?.toLocaleString ? venue.capacity.toLocaleString() : 'Not set'}</span></div>
               <div class="flex items-center gap-2">${C.icon('layers', 14)}<span class="text-muted">Zones:</span><span>${zones.length}</span></div>
             </div>
           </div>
@@ -104,7 +154,34 @@ async function renderVenueData(container, venues, venueId) {
 
   // Store venues for re-render
   window.SP.venue = {
-    select: (id) => { selectedVenueId = id; renderVenueData(container, venues, id); },
+    select: (id) => {
+      selectedVenueId = id;
+      window.SP.selectedVenueId = id;
+      renderVenueData(container, venues, id);
+    },
+    create: async (form) => {
+      const payload = {
+        name: form.elements.namedItem('name').value.trim(),
+        type: form.elements.namedItem('type').value,
+        address: form.elements.namedItem('address').value.trim(),
+        measurement_unit: form.elements.namedItem('measurement_unit').value,
+        description: form.elements.namedItem('description').value.trim(),
+      };
+      if (!payload.name || !payload.type || !payload.address) {
+        alert('Venue name, type, and address are required.');
+        return;
+      }
+
+      try {
+        const created = await createVenue(payload);
+        selectedVenueId = created.id;
+        window.SP.selectedVenueId = created.id;
+        window.SP.nav.go('physical-measurement');
+      } catch (error) {
+        console.error('Failed to create venue:', error);
+        alert(error.message || 'Could not create venue.');
+      }
+    },
     toggleZone: (zoneId) => {
       const el = document.getElementById(`zone-points-${zoneId}`);
       const arrow = document.getElementById(`zone-arrow-${zoneId}`);
