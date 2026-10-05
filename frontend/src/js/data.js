@@ -3,6 +3,7 @@
 // Demo data for frontend development. When the Go API is available,
 // the app will switch to live data. Clearly labeled as demo.
 // =========================================================================
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080").replace(/\/$/, "");
 
 export const VENUES = [
   {
@@ -168,30 +169,103 @@ export function generateSpectrum(bins = 28) {
 }
 
 // --- API simulation (async with delay) ---
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+async function requestJSON(path, options = {}) {
+  const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
+  const response = await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+function withFallback(value, fallback) {
+  return value === undefined || value === null ? fallback : value;
 }
 
 export async function fetchData(endpoint, ...args) {
-  await delay(200 + Math.random() * 200);
-  switch (endpoint) {
-    case 'venues': return VENUES;
-    case 'venue': return VENUES.find((v) => v.id === args[0]) ?? null;
-    case 'zones': return ZONES.filter((z) => z.venueId === args[0]);
-    case 'points': {
+  const fallback = {
+    venues: VENUES,
+    venue: VENUES.find((v) => v.id === args[0]) ?? null,
+    zones: ZONES.filter((z) => z.venueId === args[0]),
+    points: (() => {
       const zoneIds = ZONES.filter((z) => z.venueId === args[0]).map((z) => z.id);
       return MEASUREMENT_POINTS.filter((p) => zoneIds.includes(p.zoneId));
+    })(),
+    latest: LATEST_MEASUREMENT,
+    equipment: EQUIPMENT.filter((e) => e.venueId === args[0]),
+    signalChain: SIGNAL_CHAIN.find((sc) => sc.venueId === args[0]) ?? SIGNAL_CHAIN[0] ?? null,
+    sessions: args[0] ? SESSIONS.filter((s) => s.venueId === args[0]) : SESSIONS,
+    profiles: ENGINEERING_PROFILES.filter((p) => p.venueId === args[0]),
+    results: ENGINEERING_RESULTS,
+    verifications: VERIFICATIONS,
+    alerts: args[0] ? ALERTS.filter((a) => a.venueId === args[0]) : ALERTS,
+    suggestions: SMART_SUGGESTIONS,
+    health: SYSTEM_HEALTH,
+  }[endpoint] ?? null;
+
+  try {
+    switch (endpoint) {
+      case 'health': {
+        const result = await requestJSON('/health');
+        return { ...SYSTEM_HEALTH, ...result };
+      }
+      case 'venues':
+        return await requestJSON('/venues');
+      case 'venue': {
+        const list = await requestJSON('/venues');
+        return list.find((v) => v.id === args[0]) ?? null;
+      }
+      case 'zones': {
+        const list = await requestJSON(`/zones?venue_id=${encodeURIComponent(args[0] ?? '')}`);
+        return Array.isArray(list) ? list : [];
+      }
+      case 'points': {
+        const zoneId = args[0];
+        const list = await requestJSON(`/measurement-points?zone_id=${encodeURIComponent(zoneId ?? '')}`);
+        return Array.isArray(list) ? list : [];
+      }
+      case 'sessions': {
+        if (!args[0]) return [];
+        const list = await requestJSON(`/sessions?venue_id=${encodeURIComponent(args[0])}`);
+        return Array.isArray(list) ? list : [];
+      }
+      case 'equipment': {
+        const list = await requestJSON('/equipment');
+        if (!Array.isArray(list)) return [];
+        if (args[0]) {
+          const filtered = list.filter((item) => item.venueId === args[0] || item.venue_id === args[0]);
+          return filtered.length > 0 ? filtered : list;
+        }
+        return list;
+      }
+      case 'signalChain': {
+        const list = await requestJSON('/signal-chains');
+        if (!Array.isArray(list)) return null;
+        const selected = list.find((item) => item.venueId === args[0] || item.venue_id === args[0]);
+        return selected ?? list[0] ?? null;
+      }
+      case 'latest':
+        return null;
+      case 'profiles':
+        return [];
+      case 'results':
+        return [];
+      case 'verifications':
+        return [];
+      case 'alerts':
+        return [];
+      case 'suggestions':
+        return [];
+      default:
+        return null;
     }
-    case 'latest': return LATEST_MEASUREMENT;
-    case 'equipment': return EQUIPMENT.filter((e) => e.venueId === args[0]);
-    case 'signalChain': return SIGNAL_CHAIN.find((sc) => sc.venueId === args[0]) ?? null;
-    case 'sessions': return args[0] ? SESSIONS.filter((s) => s.venueId === args[0]) : SESSIONS;
-    case 'profiles': return ENGINEERING_PROFILES.filter((p) => p.venueId === args[0]);
-    case 'results': return ENGINEERING_RESULTS;
-    case 'verifications': return VERIFICATIONS;
-    case 'alerts': return args[0] ? ALERTS.filter((a) => a.venueId === args[0]) : ALERTS;
-    case 'suggestions': return SMART_SUGGESTIONS;
-    case 'health': return SYSTEM_HEALTH;
-    default: return null;
+  } catch (error) {
+    console.warn(`SoundPilot API fetch failed for ${endpoint}:`, error);
+    return withFallback(fallback, null);
   }
 }
