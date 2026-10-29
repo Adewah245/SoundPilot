@@ -209,6 +209,91 @@ export function saveVenueDimensionMeasurements(venueId, measurements) {
   });
 }
 
+/**
+ * List sessions for a venue from the real API.
+ * @param {string} venueId
+ * @returns {Promise<Array>}
+ */
+export function listSessions(venueId) {
+  return requestJSON(`/sessions?venue_id=${encodeURIComponent(venueId)}`);
+}
+
+/**
+ * Create a new session for a venue.
+ * @param {string} venueId
+ * @param {string} name
+ * @returns {Promise<Object>} The created session including its server-assigned ID.
+ */
+export function createSession(venueId, name) {
+  return requestJSON('/sessions', {
+    method: 'POST',
+    body: JSON.stringify({ venue_id: venueId, name, status: 'active' }),
+  });
+}
+
+/**
+ * List zones for a venue from the real API.
+ * @param {string} venueId
+ * @returns {Promise<Array>}
+ */
+export function listZones(venueId) {
+  return requestJSON(`/zones?venue_id=${encodeURIComponent(venueId)}`);
+}
+
+/**
+ * List measurement points for a zone from the real API.
+ * @param {string} zoneId
+ * @returns {Promise<Array>}
+ */
+export function listMeasurementPoints(zoneId) {
+  return requestJSON(`/measurement-points?zone_id=${encodeURIComponent(zoneId)}`);
+}
+
+/**
+ * Submit a real measurement request to the backend DSP pipeline.
+ * The backend validates, captures audio, runs DSP, stores the result in
+ * PostgreSQL and returns the saved domain.Measurement object.
+ *
+ * @param {Object} params
+ * @param {string} params.sessionId
+ * @param {string} params.venueId
+ * @param {string} params.zoneId
+ * @param {string} params.measurementPointId
+ * @param {string} [params.audioSource]
+ * @param {number} [params.audioDevice]       -1 = system default
+ * @param {number} [params.durationSeconds]
+ * @param {number} [params.sampleRate]
+ * @param {number} [params.channels]
+ * @returns {Promise<Object>} The saved measurement returned by the server.
+ */
+export function submitMeasurement({
+  sessionId,
+  venueId,
+  zoneId,
+  measurementPointId,
+  audioSource = 'microphone',
+  audioDevice = -1,
+  durationSeconds = 5,
+  sampleRate = 44100,
+  channels = 1,
+}) {
+  return requestJSON('/measurements', {
+    method: 'POST',
+    body: JSON.stringify({
+      contract_version: '1.0',
+      session_id: sessionId,
+      venue_id: venueId,
+      zone_id: zoneId,
+      measurement_point_id: measurementPointId,
+      audio_source: audioSource,
+      audio_device: audioDevice,
+      duration_seconds: durationSeconds,
+      sample_rate: sampleRate,
+      channels,
+    }),
+  });
+}
+
 function withFallback(value, fallback) {
   return value === undefined || value === null ? fallback : value;
 }

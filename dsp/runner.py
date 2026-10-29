@@ -51,17 +51,22 @@ def main() -> None:
 
     if audio_device < -1:
         raise ValueError("audio_device must be -1 or a valid device index")
+
     sample_count = int(duration_seconds * sample_rate)
 
     if sample_count < 1:
         raise ValueError(
             "duration_seconds and sample_rate must produce at least one sample"
-    )
+        )
+
+    # Pass -1 as None so sounddevice uses its default input device.
+    device_arg = None if audio_device == -1 else audio_device
 
     audio = record_audio(
-    duration_seconds=duration_seconds,
-    sample_rate=sample_rate,
-    channels=channels,
+        duration_seconds=duration_seconds,
+        sample_rate=sample_rate,
+        channels=channels,
+        device=device_arg,
     )
 
     features = extract_features(

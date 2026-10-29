@@ -41,7 +41,11 @@ type MeasurementResponse struct {
 	FrequencyData []FrequencyMeasurement `json:"frequency_data,omitempty"`
 
 	// Signal quality measurements.
-	NoiseLevel      float64 `json:"noise_level"`
+	// NoiseLevel is the estimated noise floor in dBFS (always <= 0).
+	// Computed as 20*log10(rms) of the quietest signal windows.
+	NoiseLevel float64 `json:"noise_level"`
+	// DistortionLevel is the estimated THD as a percentage (0.0–100.0).
+	// This is a coarse harmonic-energy estimate, not a precision THD+N figure.
 	DistortionLevel float64 `json:"distortion_level"`
 
 	// Detection results.

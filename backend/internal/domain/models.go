@@ -127,7 +127,11 @@ type Measurement struct {
 	PeakDecibels  float64                `json:"peak_decibels"`
 	FrequencyData []FrequencyMeasurement `json:"frequency_data,omitempty"`
 
-	NoiseLevel      float64 `json:"noise_level,omitempty"`
+	// NoiseLevel is the estimated noise floor in dBFS (always <= 0).
+	// Computed from the quietest signal windows by the DSP engine.
+	NoiseLevel float64 `json:"noise_level,omitempty"`
+	// DistortionLevel is the estimated THD as a percentage (0.0–100.0).
+	// This is a coarse harmonic-energy approximation, not a calibrated THD+N.
 	DistortionLevel float64 `json:"distortion_level,omitempty"`
 
 	ClippingDetected bool `json:"clipping_detected"`
